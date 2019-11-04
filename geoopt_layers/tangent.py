@@ -172,7 +172,7 @@ class Remap(RemapLambda):
     ----------
     source_manifold : geoopt.manifolds.Manifold
         input manifold
-    target_manifold : geoopt.manifolds.Manifold
+    target_manifold : Optional[geoopt.manifolds.Manifold]
         output manifold
     source_origin : Optional[geoopt.ManifoldTensor]
         origin point to construct tangent space
