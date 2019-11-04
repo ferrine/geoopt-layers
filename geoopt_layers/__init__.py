@@ -1,2 +1,2 @@
-from .tangent import TangentLambda, RemapLambda
+from .tangent import TangentLambda, RemapLambda, Remap
 from . import hyperbolic

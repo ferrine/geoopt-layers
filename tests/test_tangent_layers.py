@@ -94,3 +94,12 @@ def test_remap_provided_origin():
     out = layer(point)
     poincare.assert_attached(out)
     poincare.assert_check_point_on_manifold(out)
+
+
+def test_remap_init():
+    sphere = geoopt.Sphere()
+    layer = geoopt_layers.Remap(
+        source_manifold=sphere,
+        source_origin=sphere.origin(10),
+    )
+    assert layer.target_manifold is sphere

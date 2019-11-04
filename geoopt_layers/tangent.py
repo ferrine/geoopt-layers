@@ -195,10 +195,13 @@ class Remap(RemapLambda):
         target_origin_shape=None,
         learn_origin=True,
     ):
+        if target_manifold is None:
+            target_manifold = source_manifold
+            target_origin_shape = target_origin_shape or source_origin_shape or source_origin.shape
         super().__init__(
             fn=torch.nn.Identity(),
             source_manifold=source_manifold,
-            target_manifold=target_manifold or source_manifold,
+            target_manifold=target_manifold,
             source_origin=source_origin,
             target_origin=target_origin,
             source_origin_shape=source_origin_shape,
