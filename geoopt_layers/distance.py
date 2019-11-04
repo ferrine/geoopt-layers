@@ -13,9 +13,13 @@ class Distance2Centroids(torch.nn.Module):
     Parameters
     ----------
     manifold : geoopt.manifolds.Manifold
+        manifold to operate on
     centroid_shape : Union[int, Tuple[int]]
+        shape of a single centroid
     num_centroids : int
+        number of centroids
     squared : bool
+        compute squared distance? (default: True)
     """
 
     def __init__(
@@ -49,10 +53,44 @@ class Distance2Centroids(torch.nn.Module):
 
     def forward(self, input):
         self.manifold.assert_attached(input)
-        if self.manifold.ndim > 0:
-            input = input.unsqueeze(-self.manifold.ndim - 1)
+        input = input.unsqueeze(-self.manifold.ndim - 1)
         if self.squared:
             output = self.manifold.dist2(self.centroids, input)
         else:
             output = self.manifold.dist(self.centroids, input)
+        return output
+
+
+class PairwiseDistances(torch.nn.Module):
+    """
+    Pairwise Distance Layer.
+
+    Compute pairwise distances between points.
+
+    Parameters
+    ----------
+    dim : int
+        compute pairwise distance for this shape
+    squared : True
+        compute squared distance? (default: True)
+    """
+
+    def __init__(self, dim: int, squared=True):
+        super().__init__()
+        self.squared = squared
+        self.dim = dim
+
+    def forward(self, input):
+        if not isinstance(input, geoopt.ManifoldTensor):
+            raise RuntimeError("Input should be a ManifoldTensor")
+        if self.dim < 0:
+            x = input.unsqueeze(self.dim)
+            y = input.unsqueeze(self.dim - 1)
+        else:
+            x = input.unsqueeze(self.dim)
+            y = input.unsqueeze(self.dim + 1)
+        if self.squared:
+            output = input.manifold.dist2(x, y)
+        else:
+            output = input.manifold.dist(x, y)
         return output
