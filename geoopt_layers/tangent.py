@@ -88,7 +88,7 @@ class RemapLambda(torch.nn.Module):
         function to apply in tangent space
     source_manifold : geoopt.manifolds.Manifold
         input manifold
-    target_manifold : geoopt.manifolds.Manifold
+    target_manifold : Optional[geoopt.manifolds.Manifold]
         output manifold
     source_origin : Optional[geoopt.ManifoldTensor]
         origin point to construct tangent space
@@ -106,7 +106,7 @@ class RemapLambda(torch.nn.Module):
         self,
         fn,
         source_manifold: geoopt.manifolds.Manifold,
-        target_manifold: geoopt.manifolds.Manifold,
+        target_manifold: geoopt.manifolds.Manifold = None,
         source_origin: geoopt.ManifoldTensor = None,
         target_origin: geoopt.ManifoldTensor = None,
         source_origin_shape=None,
@@ -114,7 +114,11 @@ class RemapLambda(torch.nn.Module):
         learn_origin=True,
     ):
         super().__init__()
-
+        if target_manifold is None:
+            target_manifold = source_manifold
+            target_origin_shape = (
+                target_origin_shape or source_origin_shape or source_origin.shape
+            )
         # source manifold
         self.source_manifold = source_manifold
         if source_origin is not None:
@@ -196,11 +200,6 @@ class Remap(RemapLambda):
         target_origin_shape=None,
         learn_origin=True,
     ):
-        if target_manifold is None:
-            target_manifold = source_manifold
-            target_origin_shape = (
-                target_origin_shape or source_origin_shape or source_origin.shape
-            )
         super().__init__(
             fn=torch.nn.Identity(),
             source_manifold=source_manifold,
