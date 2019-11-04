@@ -1,5 +1,6 @@
 import torch.nn
 import geoopt
+from .utils import create_origin
 
 
 class TangentLambda(torch.nn.Module):
@@ -38,26 +39,13 @@ class TangentLambda(torch.nn.Module):
     ):
         super().__init__()
         self.manifold = manifold
-        if origin is not None:
-            self.manifold.assert_attached(origin)
-        elif origin_shape is None:
-            raise ValueError(
-                "origin shape is the required parameter id origin is not provided"
-            )
-        else:
-            origin = self.manifold.origin(origin_shape)
-        if out_origin is not None:
-            self.manifold.assert_attached(out_origin)
-            if not out_origin.shape == origin.shape:
-                raise ValueError("TangentLambda can't change shape")
-        elif not same_origin:
-            out_origin = self.manifold.origin(origin_shape)
-        if learn_origin:
-            origin = geoopt.ManifoldParameter(origin, manifold=manifold)
-        if out_origin is None:
+        origin = create_origin(manifold, origin, origin_shape, learn_origin)
+        if same_origin and out_origin is None:
             out_origin = origin
-        elif learn_origin:
-            out_origin = geoopt.ManifoldParameter(out_origin, manifold=manifold)
+        else:
+            out_origin = create_origin(manifold, out_origin, origin_shape, learn_origin)
+            if out_origin.shape != origin.shape:
+                raise ValueError("Shapes of origins should match")
         self.origin = origin
         self.out_origin = out_origin
         self.fn = fn
@@ -119,42 +107,22 @@ class RemapLambda(torch.nn.Module):
             target_origin_shape = (
                 target_origin_shape or source_origin_shape or source_origin.shape
             )
-        # source manifold
         self.source_manifold = source_manifold
-        if source_origin is not None:
-            self.source_manifold.assert_attached(source_origin)
-        elif source_origin_shape is None:
-            raise ValueError(
-                "`source_origin_shape` is the required parameter if origin is not provided"
-            )
-        else:
-            source_origin = self.source_manifold.origin(source_origin_shape)
-        if learn_origin:
-            source_origin = geoopt.ManifoldParameter(
-                source_origin, manifold=source_manifold
-            )
-        self.source_origin = source_origin
-
-        # target manifold
         self.target_manifold = target_manifold
-        if target_origin is not None:
-            self.target_manifold.assert_attached(target_origin)
-        elif target_origin_shape is None:
-            raise ValueError(
-                "`target_origin_shape` is the required parameter if origin is not provided and manifolds are different"
-            )
-        else:
-            target_origin = self.target_manifold.origin(target_origin_shape)
-        if learn_origin:
-            target_origin = geoopt.ManifoldParameter(
-                target_origin, manifold=target_manifold
-            )
-        self.target_origin = target_origin
+
+        source_origin = create_origin(
+            source_manifold, source_origin, source_origin_shape, learn_origin
+        )
+        target_origin = create_origin(
+            target_manifold, target_origin, target_origin_shape, learn_origin
+        )
         if source_manifold is target_manifold:
-            if not self.source_origin.shape == self.target_origin.shape:
+            if not source_origin.shape == target_origin.shape:
                 raise ValueError(
                     "When remapping on the same manifold can't have different origin shapes"
                 )
+        self.source_origin = source_origin
+        self.target_origin = target_origin
         self.fn = fn
 
     def forward(self, input):
@@ -212,3 +180,11 @@ class Remap(RemapLambda):
             target_origin_shape=target_origin_shape,
             learn_origin=learn_origin,
         )
+
+
+class Expmap(torch.nn.Module):
+    def __init__(
+        self, target_manifold, origin=None, origin_shape=None, learn_origin=True
+    ):
+        super().__init__()
+        self.target_manifold = target_manifold
