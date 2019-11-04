@@ -185,6 +185,7 @@ class Remap(RemapLambda):
     learn_origin: bool
         make origin point trainable? (default True)
     """
+
     def __init__(
         self,
         source_manifold: geoopt.manifolds.Manifold,
@@ -197,7 +198,9 @@ class Remap(RemapLambda):
     ):
         if target_manifold is None:
             target_manifold = source_manifold
-            target_origin_shape = target_origin_shape or source_origin_shape or source_origin.shape
+            target_origin_shape = (
+                target_origin_shape or source_origin_shape or source_origin.shape
+            )
         super().__init__(
             fn=torch.nn.Identity(),
             source_manifold=source_manifold,

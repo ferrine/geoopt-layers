@@ -98,8 +98,5 @@ def test_remap_provided_origin():
 
 def test_remap_init():
     sphere = geoopt.Sphere()
-    layer = geoopt_layers.Remap(
-        source_manifold=sphere,
-        source_origin=sphere.origin(10),
-    )
+    layer = geoopt_layers.Remap(source_manifold=sphere, source_origin=sphere.origin(10))
     assert layer.target_manifold is sphere
