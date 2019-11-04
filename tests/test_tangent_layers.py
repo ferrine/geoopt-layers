@@ -100,3 +100,23 @@ def test_remap_init():
     sphere = geoopt.Sphere()
     layer = geoopt_layers.Remap(source_manifold=sphere, source_origin=sphere.origin(10))
     assert layer.target_manifold is sphere
+
+
+def test_expmap():
+    sphere = geoopt.Sphere()
+    layer = geoopt_layers.Expmap(manifold=sphere, origin=sphere.origin(10))
+    smth = torch.randn(12, 3, 10)
+    out = layer(smth)
+    sphere.assert_attached(out)
+    sphere.assert_check_point_on_manifold(out)
+
+
+def test_logmap():
+    sphere = geoopt.Sphere()
+    layer = geoopt_layers.Logmap(manifold=sphere, origin=sphere.origin(10))
+    smth = torch.randn(12, 3, 10)
+    with pytest.raises(RuntimeError):
+        layer(smth)
+    out = layer(sphere.random(2, 30, 10))
+    assert isinstance(out, torch.Tensor)
+    assert not torch.isnan(out).any()

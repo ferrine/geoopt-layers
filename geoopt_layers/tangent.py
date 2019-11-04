@@ -183,8 +183,22 @@ class Remap(RemapLambda):
 
 
 class Expmap(torch.nn.Module):
-    def __init__(
-        self, target_manifold, origin=None, origin_shape=None, learn_origin=True
-    ):
+    def __init__(self, manifold, origin=None, origin_shape=None, learn_origin=True):
         super().__init__()
-        self.target_manifold = target_manifold
+        self.manifold = manifold
+        self.origin = create_origin(manifold, origin, origin_shape, learn_origin)
+
+    def forward(self, input):
+        input = self.manifold.proju(self.origin, input)
+        return self.manifold.expmap(self.origin, input)
+
+
+class Logmap(torch.nn.Module):
+    def __init__(self, manifold, origin=None, origin_shape=None, learn_origin=True):
+        super().__init__()
+        self.manifold = manifold
+        self.origin = create_origin(manifold, origin, origin_shape, learn_origin)
+
+    def forward(self, input):
+        self.manifold.assert_attached(input)
+        return self.manifold.logmap(self.origin, input)
