@@ -35,6 +35,10 @@ class MobiusLinear(torch.nn.Linear):
         output manifold
     learn_origin : bool
         add learnable origins for logmap and expmap?
+
+    Notes
+    -----
+    We could do this subclassing RemapLambda, but with default origin the implementation is faster.
     """
 
     def __init__(
