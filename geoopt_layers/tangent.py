@@ -53,11 +53,11 @@ class TangentLambda(torch.nn.Module):
         elif not same_origin:
             out_origin = self.manifold.origin(origin_shape)
         if learn_origin:
-            origin = geoopt.ManifoldParameter(origin)
+            origin = geoopt.ManifoldParameter(origin, manifold=manifold)
         if out_origin is None:
             out_origin = origin
         elif learn_origin:
-            out_origin = geoopt.ManifoldParameter(out_origin)
+            out_origin = geoopt.ManifoldParameter(out_origin, manifold=manifold)
         self.origin = origin
         self.out_origin = out_origin
         self.fn = fn
@@ -75,6 +75,33 @@ class TangentLambda(torch.nn.Module):
 
 
 class RemapLambda(torch.nn.Module):
+    """
+    Remap Tangent Lambda Layer.
+
+    Perform nonlinear transformation in tangent space of one manifold and then map the result into the new
+    manifold. New manifold may me exactly the same. In this case some restrictions
+    are applied and parallel transport performed.
+
+    Parameters
+    ----------
+    fn : callable
+        function to apply in tangent space
+    source_manifold : geoopt.manifolds.Manifold
+        input manifold
+    target_manifold : geoopt.manifolds.Manifold
+        output manifold
+    source_origin : Optional[geoopt.ManifoldTensor]
+        origin point to construct tangent space
+    target_origin : Optional[geoopt.ManifoldTensor]
+        origin point to perform final exponential map
+    source_origin_shape : Tuple[int]|int
+        shape of source origin point if tensor is not provided
+    target_origin_shape : Tuple[int]|int
+        shape of target origin point if tensor is not provided
+    learn_origin : bool
+        make origin point trainable? (default True)
+    """
+
     def __init__(
         self,
         fn,
@@ -119,11 +146,62 @@ class RemapLambda(torch.nn.Module):
                 target_origin, manifold=target_manifold
             )
         self.target_origin = target_origin
-
+        if source_manifold is target_manifold:
+            if not self.source_origin.shape == self.target_origin.shape:
+                raise ValueError("Remapping on the same manifold can't change shape")
         self.fn = fn
 
     def forward(self, input):
         self.source_manifold.assert_attached(input)
         tangent = self.source_manifold.logmap(self.source_origin, input)
         out_tangent = self.fn(tangent)
+        if self.source_manifold is self.target_manifold:
+            out_tangent = self.source_manifold.transp(
+                self.source_origin, self.target_origin, out_tangent
+            )
         return self.target_manifold.expmap(self.target_origin, out_tangent)
+
+
+class Remap(RemapLambda):
+    """
+    Remap Layer.
+
+    Remap all points from one origin/manifold to another.
+
+    Parameters
+    ----------
+    source_manifold : geoopt.manifolds.Manifold
+        input manifold
+    target_manifold : geoopt.manifolds.Manifold
+        output manifold
+    source_origin : Optional[geoopt.ManifoldTensor]
+        origin point to construct tangent space
+    target_origin : Optional[geoopt.ManifoldTensor]
+        origin point to perform final exponential map
+    source_origin_shape : Tuple[int]|int
+        shape of source origin point if tensor is not provided
+    target_origin_shape : Tuple[int]|int
+        shape of target origin point if tensor is not provided
+    learn_origin: bool
+        make origin point trainable? (default True)
+    """
+    def __init__(
+        self,
+        source_manifold: geoopt.manifolds.Manifold,
+        target_manifold: geoopt.manifolds.Manifold = None,
+        source_origin: geoopt.ManifoldTensor = None,
+        target_origin: geoopt.ManifoldTensor = None,
+        source_origin_shape=None,
+        target_origin_shape=None,
+        learn_origin=True,
+    ):
+        super().__init__(
+            fn=torch.nn.Identity(),
+            source_manifold=source_manifold,
+            target_manifold=target_manifold or source_manifold,
+            source_origin=source_origin,
+            target_origin=target_origin,
+            source_origin_shape=source_origin_shape,
+            target_origin_shape=target_origin_shape,
+            learn_origin=learn_origin,
+        )
