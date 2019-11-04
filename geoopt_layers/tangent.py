@@ -125,7 +125,7 @@ class RemapLambda(torch.nn.Module):
             self.source_manifold.assert_attached(source_origin)
         elif source_origin_shape is None:
             raise ValueError(
-                "source origin shape is the required parameter if origin is not provided"
+                "`source_origin_shape` is the required parameter if origin is not provided"
             )
         else:
             source_origin = self.source_manifold.origin(source_origin_shape)
@@ -141,7 +141,7 @@ class RemapLambda(torch.nn.Module):
             self.target_manifold.assert_attached(target_origin)
         elif target_origin_shape is None:
             raise ValueError(
-                "target origin shape is the required parameter if origin is not provided"
+                "`target_origin_shape` is the required parameter if origin is not provided and manifolds are different"
             )
         else:
             target_origin = self.target_manifold.origin(target_origin_shape)
@@ -152,7 +152,9 @@ class RemapLambda(torch.nn.Module):
         self.target_origin = target_origin
         if source_manifold is target_manifold:
             if not self.source_origin.shape == self.target_origin.shape:
-                raise ValueError("Remapping on the same manifold can't change shape")
+                raise ValueError(
+                    "When remapping on the same manifold can't have different origin shapes"
+                )
         self.fn = fn
 
     def forward(self, input):
