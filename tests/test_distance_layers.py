@@ -8,3 +8,16 @@ def test_distance2centroids():
     points = man.random(10, 9)
     distances = layer(points)
     assert distances.shape == (10, 256)
+
+
+def test_distance_pairwise():
+    man = geoopt.Sphere()
+    layer = geoopt_layers.PairwiseDistances(dim=0)
+    points = man.random(10, 9)
+    distances = layer(points)
+    assert distances.shape == (10, 10)
+
+    layer = geoopt_layers.PairwiseDistances(dim=-2)
+    points = man.random(10, 3, 9)
+    distances = layer(points)
+    assert distances.shape == (10, 3, 3)
