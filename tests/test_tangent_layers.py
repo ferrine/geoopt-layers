@@ -1,0 +1,96 @@
+import geoopt
+import torch.nn
+import geoopt_layers
+import pytest
+
+
+def test_lambda_one_origin():
+    sphere = geoopt.Sphere()
+    point = sphere.random(1, 10)
+    func = torch.nn.Linear(10, 10)
+    with pytest.raises(ValueError):
+        geoopt_layers.TangentLambda(func, manifold=sphere)
+    layer = geoopt_layers.TangentLambda(func, manifold=sphere, origin_shape=10)
+    out = layer(point)
+    sphere.assert_attached(out)
+    sphere.assert_check_point_on_manifold(out)
+
+
+def test_lambda_two_origins():
+    sphere = geoopt.Sphere()
+    point = sphere.random(1, 10)
+    func = torch.nn.Linear(10, 10)
+    layer = geoopt_layers.TangentLambda(
+        func, manifold=sphere, origin_shape=10, same_origin=False
+    )
+    out = layer(point)
+    sphere.assert_attached(out)
+    sphere.assert_check_point_on_manifold(out)
+
+
+def test_lambda_no_dim_change_origins():
+    sphere = geoopt.Sphere()
+    func = torch.nn.Linear(10, 11)
+    with pytest.raises(ValueError):
+        geoopt_layers.TangentLambda(
+            func,
+            manifold=sphere,
+            origin=sphere.origin(10),
+            out_origin=sphere.origin(11),
+        )
+
+
+def test_remap_request_shapes():
+    sphere = geoopt.Sphere()
+    poincare = geoopt.PoincareBall()
+    func = torch.nn.Linear(10, 13)
+    with pytest.raises(ValueError):
+        geoopt_layers.RemapLambda(
+            func,
+            source_manifold=sphere,
+            target_manifold=poincare,
+            source_origin_shape=None,
+            target_origin_shape=10,
+        )
+    with pytest.raises(ValueError):
+        geoopt_layers.RemapLambda(
+            func,
+            source_manifold=sphere,
+            target_manifold=poincare,
+            source_origin_shape=10,
+            target_origin_shape=None,
+        )
+
+
+def test_remap():
+    sphere = geoopt.Sphere()
+    poincare = geoopt.PoincareBall()
+    point = sphere.random(1, 10)
+    func = torch.nn.Linear(10, 13)
+    layer = geoopt_layers.RemapLambda(
+        func,
+        source_manifold=sphere,
+        target_manifold=poincare,
+        source_origin_shape=10,
+        target_origin_shape=13,
+    )
+    out = layer(point)
+    poincare.assert_attached(out)
+    poincare.assert_check_point_on_manifold(out)
+
+
+def test_remap_provided_origin():
+    sphere = geoopt.Sphere()
+    poincare = geoopt.PoincareBall()
+    point = sphere.random(1, 10)
+    func = torch.nn.Linear(10, 13)
+    layer = geoopt_layers.RemapLambda(
+        func,
+        source_manifold=sphere,
+        target_manifold=poincare,
+        source_origin=sphere.origin(10),
+        target_origin=poincare.origin(13),
+    )
+    out = layer(point)
+    poincare.assert_attached(out)
+    poincare.assert_check_point_on_manifold(out)

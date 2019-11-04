@@ -3,13 +3,38 @@ import geoopt
 
 
 class TangentLambda(torch.nn.Module):
+    """
+    Tangent Lambda Layer.
+
+    Applies a custom function in the tangent space around some origin point
+
+    Parameters
+    ----------
+    fn : callable
+        a function to apply in the tangent space
+    manifold : geoopt.manifolds.Manifold
+        the underlying manifold
+    origin : geoopt.ManifoldTensor
+        origin point to construct tangent space for the function
+    out_origin : Optional[geoopt.ManifoldTensor]
+        origin point to use for exponential map
+    origin_shape : Tuple[int]|int
+        shape of origin point if origin is not provided
+    learn_origin : bool
+        make origin point trainable? (default True)
+    same_origin : bool
+        use the same ``out_origin`` as ``origin``
+    """
+
     def __init__(
         self,
         fn,
         manifold: geoopt.manifolds.Manifold,
         origin: geoopt.ManifoldTensor = None,
+        out_origin: geoopt.ManifoldTensor = None,
         origin_shape=None,
         learn_origin=True,
+        same_origin=True,
     ):
         super().__init__()
         self.manifold = manifold
@@ -21,16 +46,32 @@ class TangentLambda(torch.nn.Module):
             )
         else:
             origin = self.manifold.origin(origin_shape)
+        if out_origin is not None:
+            self.manifold.assert_attached(out_origin)
+            if not out_origin.shape == origin.shape:
+                raise ValueError("TangentLambda can't change shape")
+        elif not same_origin:
+            out_origin = self.manifold.origin(origin_shape)
         if learn_origin:
-            origin = geoopt.ManifoldParameter(origin, manifold=manifold)
+            origin = geoopt.ManifoldParameter(origin)
+        if out_origin is None:
+            out_origin = origin
+        elif learn_origin:
+            out_origin = geoopt.ManifoldParameter(out_origin)
         self.origin = origin
+        self.out_origin = out_origin
         self.fn = fn
 
     def forward(self, input):
         self.manifold.assert_attached(input)
         tangent = self.manifold.logmap(self.origin, input)
         out_tangent = self.fn(tangent)
-        return self.manifold.expmap(self.origin, out_tangent)
+        out_tangent = self.manifold.proju(self.origin, out_tangent)
+        if self.out_origin is not self.origin:
+            out_tangent = self.manifold.transp(
+                self.origin, self.out_origin, out_tangent
+            )
+        return self.manifold.expmap(self.out_origin, out_tangent)
 
 
 class RemapLambda(torch.nn.Module):
@@ -43,8 +84,7 @@ class RemapLambda(torch.nn.Module):
         target_origin: geoopt.ManifoldTensor = None,
         source_origin_shape=None,
         target_origin_shape=None,
-        source_learn_origin=True,
-        target_learn_origin=True,
+        learn_origin=True,
     ):
         super().__init__()
 
@@ -54,11 +94,11 @@ class RemapLambda(torch.nn.Module):
             self.source_manifold.assert_attached(source_origin)
         elif source_origin_shape is None:
             raise ValueError(
-                "source origin shape is the required parameter id origin is not provided"
+                "source origin shape is the required parameter if origin is not provided"
             )
         else:
             source_origin = self.source_manifold.origin(source_origin_shape)
-        if source_learn_origin:
+        if learn_origin:
             source_origin = geoopt.ManifoldParameter(
                 source_origin, manifold=source_manifold
             )
@@ -70,11 +110,11 @@ class RemapLambda(torch.nn.Module):
             self.target_manifold.assert_attached(target_origin)
         elif target_origin_shape is None:
             raise ValueError(
-                "target origin shape is the required parameter id origin is not provided"
+                "target origin shape is the required parameter if origin is not provided"
             )
         else:
             target_origin = self.target_manifold.origin(target_origin_shape)
-        if target_learn_origin:
+        if learn_origin:
             target_origin = geoopt.ManifoldParameter(
                 target_origin, manifold=target_manifold
             )
