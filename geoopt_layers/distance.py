@@ -80,17 +80,25 @@ class PairwiseDistances(torch.nn.Module):
         self.squared = squared
         self.dim = dim
 
-    def forward(self, input):
-        if not isinstance(input, geoopt.ManifoldTensor):
-            raise RuntimeError("Input should be a ManifoldTensor")
+    def forward(self, x, y=None):
+        if y is None:
+            y = x
+        if (
+            not isinstance(x, geoopt.ManifoldTensor)
+            or not isinstance(y, geoopt.ManifoldTensor)
+            or x.manifold is not y.manifold
+        ):
+            raise RuntimeError(
+                "Input should be a ManifoldTensor and all inputs should share the same manifold"
+            )
         if self.dim < 0:
-            x = input.unsqueeze(self.dim)
-            y = input.unsqueeze(self.dim - 1)
+            y = y.unsqueeze(self.dim)
+            x = x.unsqueeze(self.dim - 1)
         else:
-            x = input.unsqueeze(self.dim)
-            y = input.unsqueeze(self.dim + 1)
+            y = y.unsqueeze(self.dim + 1)
+            x = x.unsqueeze(self.dim)
         if self.squared:
-            output = input.manifold.dist2(x, y)
+            output = x.manifold.dist2(x, y)
         else:
-            output = input.manifold.dist(x, y)
+            output = x.manifold.dist(x, y)
         return output
