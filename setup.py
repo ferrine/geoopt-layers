@@ -39,7 +39,7 @@ if __name__ == "__main__":
         maintainer_email="maxim.v.kochurov@gmail.com",
         long_description=LONG_DESCRIPTION,
         packages=find_packages(),
-        install_requires=["geoopt"],
+        install_requires=["geoopt", "torch"],
         version=get_version(PROJECT_ROOT, "geoopt_layers", "__init__.py"),
         url="https://github.com/ferrine/geoopt-layers",
         python_requires=">=3.6.0",
