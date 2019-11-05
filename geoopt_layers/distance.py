@@ -93,11 +93,11 @@ class PairwiseDistances(torch.nn.Module):
             )
         manifold = x.manifold
         if self.dim < 0:
-            y = y.unsqueeze(self.dim)
-            x = x.unsqueeze(self.dim - 1)
-        else:
-            y = y.unsqueeze(self.dim + 1)
             x = x.unsqueeze(self.dim)
+            y = y.unsqueeze(self.dim - 1)
+        else:
+            x = x.unsqueeze(self.dim + 1)
+            y = y.unsqueeze(self.dim)
         if self.squared:
             output = manifold.dist2(x, y)
         else:
