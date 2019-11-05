@@ -91,6 +91,7 @@ class PairwiseDistances(torch.nn.Module):
             raise RuntimeError(
                 "Input should be a ManifoldTensor and all inputs should share the same manifold"
             )
+        manifold = x.manifold
         if self.dim < 0:
             y = y.unsqueeze(self.dim)
             x = x.unsqueeze(self.dim - 1)
@@ -98,7 +99,7 @@ class PairwiseDistances(torch.nn.Module):
             y = y.unsqueeze(self.dim + 1)
             x = x.unsqueeze(self.dim)
         if self.squared:
-            output = x.manifold.dist2(x, y)
+            output = manifold.dist2(x, y)
         else:
-            output = x.manifold.dist(x, y)
+            output = manifold.dist(x, y)
         return output

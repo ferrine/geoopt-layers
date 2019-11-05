@@ -1,9 +1,9 @@
 import torch.nn
 import geoopt
-from .utils import create_origin
+from .utils import ManifoldModule
 
 
-class TangentLambda(torch.nn.Module):
+class TangentLambda(ManifoldModule):
     """
     Tangent Lambda Layer.
 
@@ -39,15 +39,15 @@ class TangentLambda(torch.nn.Module):
     ):
         super().__init__()
         self.manifold = manifold
-        origin = create_origin(manifold, origin, origin_shape, learn_origin)
+        self.register_origin("origin", manifold, origin, origin_shape, learn_origin)
         if same_origin and out_origin is None:
-            out_origin = origin
+            self.register_buffer("out_origin", self.origin)
         else:
-            out_origin = create_origin(manifold, out_origin, origin_shape, learn_origin)
-            if out_origin.shape != origin.shape:
+            self.register_origin(
+                "out_origin", manifold, out_origin, origin_shape, learn_origin
+            )
+            if self.out_origin.shape != self.origin.shape:
                 raise ValueError("Shapes of origins should match")
-        self.origin = origin
-        self.out_origin = out_origin
         self.fn = fn
 
     def forward(self, input):
@@ -62,7 +62,7 @@ class TangentLambda(torch.nn.Module):
         return self.manifold.expmap(self.out_origin, out_tangent)
 
 
-class RemapLambda(torch.nn.Module):
+class RemapLambda(ManifoldModule):
     """
     Remap Tangent Lambda Layer.
 
@@ -110,19 +110,25 @@ class RemapLambda(torch.nn.Module):
         self.source_manifold = source_manifold
         self.target_manifold = target_manifold
 
-        source_origin = create_origin(
-            source_manifold, source_origin, source_origin_shape, learn_origin
+        self.register_origin(
+            "source_origin",
+            source_manifold,
+            source_origin,
+            source_origin_shape,
+            learn_origin,
         )
-        target_origin = create_origin(
-            target_manifold, target_origin, target_origin_shape, learn_origin
+        self.register_origin(
+            "target_origin",
+            target_manifold,
+            target_origin,
+            target_origin_shape,
+            learn_origin,
         )
-        if source_manifold is target_manifold:
-            if not source_origin.shape == target_origin.shape:
+        if self.source_manifold is self.target_manifold:
+            if not self.source_origin.shape == self.target_origin.shape:
                 raise ValueError(
                     "When remapping on the same manifold can't have different origin shapes"
                 )
-        self.source_origin = source_origin
-        self.target_origin = target_origin
         self.fn = fn
 
     def forward(self, input):
@@ -182,22 +188,22 @@ class Remap(RemapLambda):
         )
 
 
-class Expmap(torch.nn.Module):
+class Expmap(ManifoldModule):
     def __init__(self, manifold, origin=None, origin_shape=None, learn_origin=True):
         super().__init__()
         self.manifold = manifold
-        self.origin = create_origin(manifold, origin, origin_shape, learn_origin)
+        self.register_origin("origin", manifold, origin, origin_shape, learn_origin)
 
     def forward(self, input):
         input = self.manifold.proju(self.origin, input)
         return self.manifold.expmap(self.origin, input)
 
 
-class Logmap(torch.nn.Module):
+class Logmap(ManifoldModule):
     def __init__(self, manifold, origin=None, origin_shape=None, learn_origin=True):
         super().__init__()
         self.manifold = manifold
-        self.origin = create_origin(manifold, origin, origin_shape, learn_origin)
+        self.register_origin("origin", manifold, origin, origin_shape, learn_origin)
 
     def forward(self, input):
         self.manifold.assert_attached(input)

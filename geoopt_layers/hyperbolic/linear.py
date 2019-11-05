@@ -1,8 +1,9 @@
 import torch.nn
 import geoopt
+from ..utils import ManifoldModule
 
 
-class MobiusLinear(torch.nn.Linear):
+class MobiusLinear(torch.nn.Linear, ManifoldModule):
     """
     Hyperbolic Linear Layer.
 
