@@ -36,3 +36,16 @@ def test_distance_pairwise_paired():
     points1 = man.random(7, 3, 9)
     distances = layer(points, points1)
     assert distances.shape == (10, 7, 3)
+
+
+def test_distance_pairwise_auto():
+    man = geoopt.Sphere()
+    layer = geoopt_layers.PairwiseDistances(dim=0, manifold=man)
+    points = man.random(10, 9)
+    distances = layer(points)
+    assert distances.shape == (10, 10)
+
+    layer = geoopt_layers.PairwiseDistances(dim=-2, manifold=man)
+    points = man.random(10, 3, 9)
+    distances = layer(points.detach())
+    assert distances.shape == (10, 3, 3)

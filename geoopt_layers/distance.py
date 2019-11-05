@@ -73,17 +73,19 @@ class PairwiseDistances(torch.nn.Module):
         compute pairwise distance for this shape
     squared : True
         compute squared distance? (default: True)
+    manifold : Optional[geoopt.manifold.Manifold]
     """
 
-    def __init__(self, dim: int, squared=True):
+    def __init__(self, dim: int, squared=True, manifold=None):
         super().__init__()
         self.squared = squared
         self.dim = dim
+        self.manifold = manifold
 
     def forward(self, x, y=None):
         if y is None:
             y = x
-        if (
+        if self.manifold is None and (
             not isinstance(x, geoopt.ManifoldTensor)
             or not isinstance(y, geoopt.ManifoldTensor)
             or x.manifold is not y.manifold
@@ -91,7 +93,12 @@ class PairwiseDistances(torch.nn.Module):
             raise RuntimeError(
                 "Input should be a ManifoldTensor and all inputs should share the same manifold"
             )
-        manifold = x.manifold
+        elif self.manifold is not None:
+            if isinstance(x, geoopt.ManifoldTensor) and x.manifold is not self.manifold:
+                raise RuntimeError("Manifolds do not match")
+            if isinstance(y, geoopt.ManifoldTensor) and y.manifold is not self.manifold:
+                raise RuntimeError("Manifolds do not match")
+        manifold = self.manifold or x.manifold
         if self.dim < 0:
             x = x.unsqueeze(self.dim)
             y = y.unsqueeze(self.dim - 1)
