@@ -3,3 +3,6 @@ from .distance import Distance2Centroids, PairwiseDistances
 from . import hyperbolic
 from . import tangent
 from . import distance
+
+
+__version__ = "0.0.1"
