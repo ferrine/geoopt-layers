@@ -1,4 +1,4 @@
-import geoopt
+import geoopt.utils
 import torch
 
 
@@ -49,3 +49,49 @@ class ManifoldModule(torch.nn.Module):
             self.register_parameter(name, origin)
         else:
             self.register_buffer(name, origin)
+
+
+class Permute(torch.nn.Module):
+    """
+    Permute Layer.
+
+    All manifold aware layers assume manifold dimension is the last dimension.
+    Therefore, if you want to use regular pytorch layers within geoopt-layers,
+    you may need (like in case 2d convolutions) permute dimensions
+
+    Parameters
+    ----------
+    permutation : int|tuple
+        parameters for pytorch permute
+    manifold : Optional[geoopt.manifolds.Manifold]
+        Optionally attach the manifold to the output
+    """
+
+    def __init__(self, *permutation, manifold=None):
+        super().__init__()
+        self.permutation = geoopt.utils.size2shape(*permutation)
+        self.manifold = manifold
+
+    def forward(self, input: torch.Tensor):
+        out = input.permute(*self.permutation)
+        if self.manifold is not None:
+            out = self.manifold.attach(out)
+        return out
+
+    def inverse(self, manifold=None):
+        """
+        Invert the permutation
+
+        Parameters
+        ----------
+        manifold : Optional[geoopt.manifolds.Manifold]
+            Optionally attach the manifold to the output
+
+        Returns
+        -------
+        Permute
+        """
+        reverse_permute = [
+            self.permutation.index(l) for l in range(len(self.permutation))
+        ]
+        return self.__class__(*reverse_permute, manifold=manifold)

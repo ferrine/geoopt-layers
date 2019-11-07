@@ -1,8 +1,9 @@
 from .tangent import TangentLambda, RemapLambda, Remap, Expmap, Logmap
 from .distance import Distance2Centroids, PairwiseDistances
+from .utils import Permute
 from . import poincare
 from . import tangent
 from . import distance
-
+from . import utils
 
 __version__ = "0.0.1"
