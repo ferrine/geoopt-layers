@@ -19,7 +19,6 @@ However, we hound it useful to enforce some constraints in the design.
 
 - All input tensors should be Manifold tensors with same manifold attached as in the layer.
 - All output tensors should have manifold attached.
-- Manifold dimension is the last dimension. We provide utils so that it is less pain.
 
 These two rules make initialization a bit cumbersome, but overall robustness to bugs increases.
 

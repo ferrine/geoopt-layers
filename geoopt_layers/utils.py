@@ -67,13 +67,16 @@ class Permute(torch.nn.Module):
         Optionally attach the manifold to the output
     """
 
-    def __init__(self, *permutation, manifold=None):
+    def __init__(self, *permutation, manifold=None, contiguous=True):
         super().__init__()
         self.permutation = geoopt.utils.size2shape(*permutation)
         self.manifold = manifold
+        self.contiguous = contiguous
 
-    def forward(self, input: torch.Tensor):
+    def forward(self, input):
         out = input.permute(*self.permutation)
+        if self.contiguous:
+            out = out.contiguous()
         if self.manifold is not None:
             out = self.manifold.attach(out)
         return out
@@ -94,4 +97,37 @@ class Permute(torch.nn.Module):
         reverse_permute = [
             self.permutation.index(l) for l in range(len(self.permutation))
         ]
-        return self.__class__(*reverse_permute, manifold=manifold)
+        return self.__class__(
+            *reverse_permute, manifold=manifold, contiguous=self.contiguous
+        )
+
+
+class Permuted(torch.nn.Module):
+    """
+    Permuted function.
+
+    Applies a function with input permutation, permutes the result back after.
+    """
+
+    def __init__(
+        self,
+        function,
+        permutation,
+        input_manifold=None,
+        output_manifold=None,
+        contiguous=True,
+    ):
+        super().__init__()
+        self.forward_permutation = Permute(
+            *permutation, contiguous=contiguous, manifold=input_manifold
+        )
+        self.reverse_permutation = self.forward_permutation.inverse(
+            manifold=output_manifold
+        )
+        self.function = function
+
+    def forward(self, input):
+        input = self.forward_permutation(input)
+        output = self.function(input)
+        output = self.reverse_permutation(output)
+        return output

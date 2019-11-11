@@ -1,43 +1,101 @@
-import torch
+import torch.nn.functional
+
+from geoopt_layers.poincare.functional import (
+    mobius_adaptive_max_pool2d,
+    mobius_max_pool2d,
+    mobius_avg_pool2d,
+    mobius_adaptive_avg_pool2d,
+)
+import geoopt
 
 
-def mobius_adaptive_max_pool(input, output_size, return_indices=False):
-    norms = input.norm(dim=1, keepdim=True)
-    _, idx = torch.nn.functional.adaptive_max_pool2d(
-        norms, output_size, return_indices=True
-    )
-    out = input.view(input.shape[0], input.shape[1], -1)
-    out = out[
-        torch.arange(input.shape[0], device=input.device).view((-1, 1, 1, 1)),
-        torch.arange(input.shape[1], device=input.device).view((1, -1, 1, 1)),
-        idx,
-    ]
-    if return_indices:
-        return out, idx
-    else:
-        return out
+class MobiusAvgPool2d(torch.nn.AvgPool2d):
+    def __init__(
+        self,
+        kernel_size,
+        stride=1,
+        padding=0,
+        ceil_mode=False,
+        *,
+        ball: geoopt.PoincareBall
+    ):
+        super().__init__(
+            kernel_size=kernel_size, stride=stride, padding=padding, ceil_mode=ceil_mode
+        )
+        self.ball = ball
+
+    def forward(self, input):
+        self.ball.assert_attached(input)
+        return self.ball.attach(
+            mobius_avg_pool2d(
+                input,
+                kernel_size=self.kernel_size,
+                stride=self.stride,
+                padding=self.padding,
+                ceil_mode=self.ceil_mode,
+                ball=self.ball,
+            )
+        )
 
 
-def mobius_max_pool(
-    input,
-    kernel_size,
-    stride=None,
-    padding=0,
-    dilation=1,
-    ceil_mode=False,
-    return_indices=False,
-):
-    norms = input.norm(dim=1, keepdim=True)
-    _, idx = torch.nn.functional.max_pool2d(
-        norms, kernel_size, stride, padding, dilation, ceil_mode, return_indices=True
-    )
-    out = input.view(input.shape[0], input.shape[1], -1)
-    out = out[
-        torch.arange(input.shape[0], device=input.device).view((-1, 1, 1, 1)),
-        torch.arange(input.shape[1], device=input.device).view((1, -1, 1, 1)),
-        idx,
-    ]
-    if return_indices:
-        return out, idx
-    else:
-        return out
+class MobiusAdaptiveAvgPool2d(torch.nn.AdaptiveAvgPool2d):
+    def __init__(self, output_size, *, ball):
+        super().__init__(output_size)
+        self.ball = ball
+
+    def forward(self, input):
+        self.ball.assert_attached(input)
+        return self.ball.attach(
+            mobius_adaptive_avg_pool2d(
+                input, output_size=self.output_size, ball=self.ball
+            )
+        )
+
+
+class MobiusMaxPool2d(torch.nn.MaxPool2d):
+    def __init__(
+        self,
+        kernel_size,
+        stride=None,
+        padding=0,
+        dilation=1,
+        return_indices=False,
+        ceil_mode=False,
+        *,
+        ball
+    ):
+        super().__init__(
+            kernel_size=kernel_size,
+            stride=stride,
+            padding=padding,
+            dilation=dilation,
+            return_indices=return_indices,
+            ceil_mode=ceil_mode,
+        )
+        self.ball = ball
+
+    def forward(self, input: torch.Tensor):
+        self.ball.assert_attached(input)
+        return self.ball.attach(
+            mobius_max_pool2d(
+                input,
+                kernel_size=self.kernel_size,
+                stride=self.stride,
+                padding=self.padding,
+                dilation=self.dilation,
+                ceil_mode=self.ceil_mode,
+                return_indices=self.return_indices,
+            )
+        )
+
+
+class MobiusAdaptiveMaxPool2d(torch.nn.AdaptiveMaxPool2d):
+    def __init__(self, output_size, return_indices=False, *, ball):
+        super().__init__(output_size=output_size, return_indices=return_indices)
+        self.ball = ball
+
+    def forward(self, input: torch.Tensor):
+        self.ball.assert_attached(input)
+        return self.ball.attach(
+            mobius_adaptive_max_pool2d(input, self.output_size, self.return_indices)
+        )
