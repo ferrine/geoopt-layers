@@ -240,8 +240,10 @@ class Expmap2d(Permuted, ManifoldModule):
         origin=None,
         origin_shape=None,
         learn_origin=True,
+        contiguous=True,
     ):
-        assert manifold.ndim == 1, "Manidold.ndim is required to be 1"
+        if not manifold.ndim == 1:
+            raise ValueError("manifold.ndim is required to be 1")
         expmap = Expmap(
             manifold,
             origin=origin,
@@ -249,7 +251,11 @@ class Expmap2d(Permuted, ManifoldModule):
             learn_origin=learn_origin,
         )
         super().__init__(
-            expmap, (0, 2, 3, 1), input_manifold=None, output_manifold=manifold
+            expmap,
+            (0, 2, 3, 1),
+            input_manifold=None,
+            output_manifold=manifold,
+            contiguous=contiguous,
         )
 
 
@@ -260,8 +266,10 @@ class Logmap2d(Permuted, ManifoldModule):
         origin=None,
         origin_shape=None,
         learn_origin=True,
+        contiguous=True,
     ):
-        assert manifold.ndim == 1, "Manidold.ndim is required to be 1"
+        if not manifold.ndim == 1:
+            raise ValueError("manifold.ndim is required to be 1")
         logmap = Logmap(
             manifold,
             origin=origin,
@@ -269,5 +277,9 @@ class Logmap2d(Permuted, ManifoldModule):
             learn_origin=learn_origin,
         )
         super().__init__(
-            logmap, (0, 2, 3, 1), input_manifold=manifold, output_manifold=None
+            logmap,
+            (0, 2, 3, 1),
+            input_manifold=manifold,
+            output_manifold=None,
+            contiguous=contiguous,
         )
