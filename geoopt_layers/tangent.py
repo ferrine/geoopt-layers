@@ -200,7 +200,13 @@ class Remap(RemapLambda):
 
 
 class Expmap(ManifoldModule):
-    def __init__(self, manifold, origin=None, origin_shape=None, learn_origin=True):
+    def __init__(
+        self,
+        manifold: geoopt.manifolds.Manifold,
+        origin=None,
+        origin_shape=None,
+        learn_origin=True,
+    ):
         super().__init__()
         self.manifold = manifold
         self.register_origin("origin", manifold, origin, origin_shape, learn_origin)
@@ -211,7 +217,13 @@ class Expmap(ManifoldModule):
 
 
 class Logmap(ManifoldModule):
-    def __init__(self, manifold, origin=None, origin_shape=None, learn_origin=True):
+    def __init__(
+        self,
+        manifold: geoopt.manifolds.Manifold,
+        origin=None,
+        origin_shape=None,
+        learn_origin=True,
+    ):
         super().__init__()
         self.manifold = manifold
         self.register_origin("origin", manifold, origin, origin_shape, learn_origin)
@@ -222,7 +234,13 @@ class Logmap(ManifoldModule):
 
 
 class Expmap2d(Permuted, ManifoldModule):
-    def __init__(self, manifold, origin=None, origin_shape=None, learn_origin=True):
+    def __init__(
+        self,
+        manifold: geoopt.manifolds.Manifold,
+        origin=None,
+        origin_shape=None,
+        learn_origin=True,
+    ):
         assert manifold.ndim == 1, "Manidold.ndim is required to be 1"
         expmap = Expmap(
             manifold,
@@ -236,7 +254,13 @@ class Expmap2d(Permuted, ManifoldModule):
 
 
 class Logmap2d(Permuted, ManifoldModule):
-    def __init__(self, manifold, origin=None, origin_shape=None, learn_origin=True):
+    def __init__(
+        self,
+        manifold: geoopt.manifolds.Manifold,
+        origin=None,
+        origin_shape=None,
+        learn_origin=True,
+    ):
         assert manifold.ndim == 1, "Manidold.ndim is required to be 1"
         logmap = Logmap(
             manifold,
