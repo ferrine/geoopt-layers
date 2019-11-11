@@ -9,15 +9,7 @@ from geoopt_layers.poincare.functional import (
 
 
 class MobiusAvgPool2d(torch.nn.AvgPool2d, ManifoldModule):
-    def __init__(
-        self,
-        kernel_size,
-        stride=1,
-        padding=0,
-        ceil_mode=False,
-        *,
-        ball
-    ):
+    def __init__(self, kernel_size, stride=1, padding=0, ceil_mode=False, *, ball):
         super().__init__(
             kernel_size=kernel_size, stride=stride, padding=padding, ceil_mode=ceil_mode
         )

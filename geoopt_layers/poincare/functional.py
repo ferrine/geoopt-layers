@@ -15,9 +15,7 @@ def mobius_adaptive_max_pool2d(input, output_size, return_indices=False):
         torch.arange(input.shape[1], device=input.device).view((1, -1, 1, 1)),
         idx,
     ]
-    out = out.permute(0, 2, 3, 1)
     if return_indices:
-        idx = idx.permute(0, 2, 3, 1)
         return out, idx
     else:
         return out
