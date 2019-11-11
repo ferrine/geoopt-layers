@@ -3,6 +3,8 @@ from .functional import mobius_batch_norm2d
 import torch
 import geoopt
 
+__all__ = ["MobiusBatchNorm2d"]
+
 
 class MobiusBatchNorm2d(ManifoldModule):
     def __init__(

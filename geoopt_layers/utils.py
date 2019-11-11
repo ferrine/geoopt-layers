@@ -1,6 +1,8 @@
 import geoopt.utils
 import torch
 
+__all__ = ["Permute", "Permuted", "ManifoldModule"]
+
 
 def create_origin(
     manifold: geoopt.manifolds.Manifold,

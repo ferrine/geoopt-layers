@@ -1,6 +1,11 @@
 import torch.nn
 import geoopt
+
+from geoopt_layers.poincare.functional import mobius_linear
 from ..utils import ManifoldModule
+
+
+__all__ = ["MobiusLinear"]
 
 
 class MobiusLinear(torch.nn.Linear, ManifoldModule):
@@ -93,37 +98,3 @@ class MobiusLinear(torch.nn.Linear, ManifoldModule):
         super().reset_parameters()
         if self.bias is not None:
             self.bias.zero_()
-
-
-def mobius_linear(
-    input,
-    weight,
-    bias=None,
-    *,
-    ball: geoopt.PoincareBall,
-    ball_out: geoopt.PoincareBall,
-    source_origin=None,
-    target_origin=None,
-):
-    if source_origin is not None and target_origin is not None:
-        # We need to take care of origins
-        tangent = ball.logmap(source_origin, input)
-        new_tangent = tangent @ weight
-        if ball is ball_out:
-            # In case same manifolds are used, we need to perform parallel transport
-            new_tangent = ball.transp(source_origin, target_origin, new_tangent)
-        output = ball_out.expmap(target_origin, new_tangent)
-        if bias is not None:
-            output = ball_out.mobius_add(output, bias)
-    else:
-        if ball is ball_out:
-            output = ball.mobius_matvec(weight, input)
-            if bias is not None:
-                output = ball.mobius_add(output, bias)
-        else:
-            tangent = ball.logmap0(input)
-            new_tangent = tangent @ weight
-            output = ball_out.expmap0(new_tangent)
-            if bias is not None:
-                output = ball_out.mobius_add(output, bias)
-    return output

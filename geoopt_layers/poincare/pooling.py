@@ -7,6 +7,8 @@ from geoopt_layers.poincare.functional import (
     mobius_adaptive_avg_pool2d,
 )
 
+__all__ = ["MobiusAvgPool2d", "MobiusAdaptiveAvgPool2d", "MobiusMaxPool2d", "MobiusAdaptiveMaxPool2d"]
+
 
 class MobiusAvgPool2d(torch.nn.AvgPool2d, ManifoldModule):
     def __init__(self, kernel_size, stride=1, padding=0, ceil_mode=False, *, ball):
