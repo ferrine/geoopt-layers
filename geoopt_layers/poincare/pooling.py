@@ -1,5 +1,5 @@
 import torch.nn.functional
-
+from ..utils import ManifoldModule
 from geoopt_layers.poincare.functional import (
     mobius_adaptive_max_pool2d,
     mobius_max_pool2d,
@@ -8,7 +8,7 @@ from geoopt_layers.poincare.functional import (
 )
 
 
-class MobiusAvgPool2d(torch.nn.AvgPool2d):
+class MobiusAvgPool2d(torch.nn.AvgPool2d, ManifoldModule):
     def __init__(
         self,
         kernel_size,
@@ -37,7 +37,7 @@ class MobiusAvgPool2d(torch.nn.AvgPool2d):
         )
 
 
-class MobiusAdaptiveAvgPool2d(torch.nn.AdaptiveAvgPool2d):
+class MobiusAdaptiveAvgPool2d(torch.nn.AdaptiveAvgPool2d, ManifoldModule):
     def __init__(self, output_size, *, ball):
         super().__init__(output_size)
         self.ball = ball
@@ -51,7 +51,7 @@ class MobiusAdaptiveAvgPool2d(torch.nn.AdaptiveAvgPool2d):
         )
 
 
-class MobiusMaxPool2d(torch.nn.MaxPool2d):
+class MobiusMaxPool2d(torch.nn.MaxPool2d, ManifoldModule):
     def __init__(
         self,
         kernel_size,
@@ -88,7 +88,7 @@ class MobiusMaxPool2d(torch.nn.MaxPool2d):
         )
 
 
-class MobiusAdaptiveMaxPool2d(torch.nn.AdaptiveMaxPool2d):
+class MobiusAdaptiveMaxPool2d(torch.nn.AdaptiveMaxPool2d, ManifoldModule):
     def __init__(self, output_size, return_indices=False, *, ball):
         super().__init__(output_size=output_size, return_indices=return_indices)
         self.ball = ball
