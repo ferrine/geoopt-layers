@@ -6,7 +6,6 @@ from geoopt_layers.poincare.functional import (
     mobius_avg_pool2d,
     mobius_adaptive_avg_pool2d,
 )
-import geoopt
 
 
 class MobiusAvgPool2d(torch.nn.AvgPool2d):
@@ -17,7 +16,7 @@ class MobiusAvgPool2d(torch.nn.AvgPool2d):
         padding=0,
         ceil_mode=False,
         *,
-        ball: geoopt.PoincareBall
+        ball
     ):
         super().__init__(
             kernel_size=kernel_size, stride=stride, padding=padding, ceil_mode=ceil_mode
