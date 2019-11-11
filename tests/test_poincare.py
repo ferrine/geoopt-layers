@@ -102,3 +102,14 @@ def test_adaptive_avg_pool():
     assert out.shape == (2, 2, 2, 2)
     ball.assert_attached(out)
     ball.assert_check_point_on_manifold(out.permute(0, 2, 3, 1))
+
+
+def test_batch_norm():
+    ball = geoopt.PoincareBall()
+    point = ball.random(2, 5, 5, 2).permute(0, 3, 1, 2)
+    point = ball.attach(point)
+    layer = geoopt_layers.poincare.MobiusBatchNorm2d(2, ball=ball)
+    out = layer(point)
+    assert out.shape == (2, 2, 5, 5)
+    ball.assert_attached(out)
+    ball.assert_check_point_on_manifold(out.permute(0, 2, 3, 1))

@@ -17,15 +17,13 @@ class MobiusAvgPool2d(torch.nn.AvgPool2d, ManifoldModule):
 
     def forward(self, input):
         self.ball.assert_attached(input)
-        return self.ball.attach(
-            mobius_avg_pool2d(
-                input,
-                kernel_size=self.kernel_size,
-                stride=self.stride,
-                padding=self.padding,
-                ceil_mode=self.ceil_mode,
-                ball=self.ball,
-            )
+        return mobius_avg_pool2d(
+            input,
+            kernel_size=self.kernel_size,
+            stride=self.stride,
+            padding=self.padding,
+            ceil_mode=self.ceil_mode,
+            ball=self.ball,
         )
 
 
@@ -36,10 +34,8 @@ class MobiusAdaptiveAvgPool2d(torch.nn.AdaptiveAvgPool2d, ManifoldModule):
 
     def forward(self, input):
         self.ball.assert_attached(input)
-        return self.ball.attach(
-            mobius_adaptive_avg_pool2d(
-                input, output_size=self.output_size, ball=self.ball
-            )
+        return mobius_adaptive_avg_pool2d(
+            input, output_size=self.output_size, ball=self.ball
         )
 
 

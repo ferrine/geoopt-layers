@@ -86,3 +86,37 @@ def mobius_adaptive_avg_pool2d(input, output_size, *, ball: geoopt.PoincareBall)
     output = math.klein2poincare(output, c=ball.c, dim=1)
     output = ball.projx(output, dim=1)
     return output
+
+
+def mobius_batch_norm2d(
+    input,
+    running_midpoint,
+    running_variance,
+    beta1,
+    beta2,
+    alpha=1.0,
+    epsilon=1e-4,
+    training=True,
+    *,
+    ball
+):
+    if training:
+        midpoint = math.poincare_mean(input, dim=1, keepdim=True, c=ball.c)
+        midpoint = ball.projx(midpoint, dim=1)
+        variance = ball.dist(midpoint, input, dim=1).pow(2).mean()
+
+        input = ball.mobius_add(-midpoint, input, dim=1)
+        input = ball.mobius_scalar_mul(
+            alpha / (variance + epsilon) ** 0.5, input, dim=1
+        )
+        with torch.no_grad():
+            running_variance.mul_(beta1).add_(1 - beta1, variance)
+            running_midpoint.set_(
+                ball.geodesic(beta2, midpoint, running_midpoint, dim=1).data
+            )
+    else:
+        input = ball.mobius_add(-running_midpoint, input, dim=1)
+        input = ball.mobius_scalar_mul(
+            alpha / (running_variance + epsilon) ** 0.5, input, dim=1
+        )
+    return ball.attach(input)
