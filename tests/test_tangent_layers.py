@@ -1,5 +1,6 @@
 import geoopt
 import torch.nn
+import numpy as np
 import geoopt_layers
 import pytest
 
@@ -120,3 +121,17 @@ def test_logmap():
     out = layer(sphere.random(2, 30, 10))
     assert isinstance(out, torch.Tensor)
     assert not torch.isnan(out).any()
+
+
+def test_expmap2d():
+    ball = geoopt.PoincareBall()
+    point = torch.randn(2, 2, 5, 5)
+    point = ball.attach(point)
+    layer = geoopt_layers.Expmap2d(ball, origin_shape=(2,))
+    layer1 = geoopt_layers.Logmap2d(ball, origin_shape=(2,))
+    out = layer(point)
+    assert out.shape == (2, 2, 5, 5)
+    ball.assert_attached(out)
+    ball.assert_check_point_on_manifold(out.permute(0, 2, 3, 1))
+    reverse = layer1(out)
+    np.testing.assert_allclose(point.detach(), reverse.detach(), atol=1e-4)

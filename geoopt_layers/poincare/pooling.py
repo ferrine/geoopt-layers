@@ -7,7 +7,12 @@ from geoopt_layers.poincare.functional import (
     mobius_adaptive_avg_pool2d,
 )
 
-__all__ = ["MobiusAvgPool2d", "MobiusAdaptiveAvgPool2d", "MobiusMaxPool2d", "MobiusAdaptiveMaxPool2d"]
+__all__ = [
+    "MobiusAvgPool2d",
+    "MobiusAdaptiveAvgPool2d",
+    "MobiusMaxPool2d",
+    "MobiusAdaptiveMaxPool2d",
+]
 
 
 class MobiusAvgPool2d(torch.nn.AvgPool2d, ManifoldModule):

@@ -3,7 +3,15 @@ import geoopt
 from .utils import ManifoldModule, Permuted
 
 
-__all__ = ["TangentLambda", "Remap", "RemapLambda", "Logmap", "Expmap"]
+__all__ = [
+    "TangentLambda",
+    "Remap",
+    "RemapLambda",
+    "Logmap",
+    "Expmap",
+    "Expmap2d",
+    "Logmap2d",
+]
 
 
 class TangentLambda(ManifoldModule):
@@ -216,12 +224,26 @@ class Logmap(ManifoldModule):
 class Expmap2d(Permuted, ManifoldModule):
     def __init__(self, manifold, origin=None, origin_shape=None, learn_origin=True):
         assert manifold.ndim == 1, "Manidold.ndim is required to be 1"
-        expmap = Expmap(manifold, origin=origin, origin_shape=origin_shape, learn_origin=learn_origin)
-        super().__init__(expmap, (0, 3, 1, 2), input_manifold=None, output_manifold=manifold)
+        expmap = Expmap(
+            manifold,
+            origin=origin,
+            origin_shape=origin_shape,
+            learn_origin=learn_origin,
+        )
+        super().__init__(
+            expmap, (0, 2, 3, 1), input_manifold=None, output_manifold=manifold
+        )
 
 
 class Logmap2d(Permuted, ManifoldModule):
     def __init__(self, manifold, origin=None, origin_shape=None, learn_origin=True):
         assert manifold.ndim == 1, "Manidold.ndim is required to be 1"
-        logmap = Logmap(manifold, origin=origin, origin_shape=origin_shape, learn_origin=learn_origin)
-        super().__init__(logmap, (0, 3, 1, 2), input_manifold=manifold, output_manifold=None)
+        logmap = Logmap(
+            manifold,
+            origin=origin,
+            origin_shape=origin_shape,
+            learn_origin=learn_origin,
+        )
+        super().__init__(
+            logmap, (0, 2, 3, 1), input_manifold=manifold, output_manifold=None
+        )

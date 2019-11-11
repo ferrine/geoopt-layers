@@ -98,7 +98,7 @@ def mobius_batch_norm2d(
     epsilon=1e-4,
     training=True,
     *,
-    ball
+    ball,
 ):
     if training:
         midpoint = math.poincare_mean(input, dim=1, keepdim=True, c=ball.c)

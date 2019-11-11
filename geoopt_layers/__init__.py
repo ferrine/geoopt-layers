@@ -1,4 +1,12 @@
-from .tangent import TangentLambda, RemapLambda, Remap, Expmap, Logmap
+from .tangent import (
+    TangentLambda,
+    RemapLambda,
+    Remap,
+    Expmap,
+    Logmap,
+    Expmap2d,
+    Logmap2d,
+)
 from .distance import Distance2Centroids, PairwiseDistances
 from .utils import Permute
 from . import poincare
