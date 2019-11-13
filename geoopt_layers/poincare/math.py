@@ -3,7 +3,7 @@ import torch
 
 def idx2sign(idx, dim, neg=True):
     """
-    Unifies idx to be negative or positive, that helps in cases of broadcasting
+    Unify idx to be negative or positive, that helps in cases of broadcasting.
 
     Parameters
     ----------
@@ -13,6 +13,7 @@ def idx2sign(idx, dim, neg=True):
         maximum dimension
     neg : bool
         indicate we need negative index
+
     Returns
     -------
     int
@@ -38,6 +39,7 @@ def poincare2klein(x, *, c=1.0, dim=-1):
         negative curvature
     dim : int
         dimension to calculate conformal and Lorenz factors
+
     Returns
     -------
     tensor
@@ -59,6 +61,7 @@ def klein2poincare(x, *, c=1.0, dim=-1):
         negative curvature
     dim : int
         dimension to calculate conformal and Lorenz factors
+
     Returns
     -------
     tensor
@@ -70,6 +73,8 @@ def klein2poincare(x, *, c=1.0, dim=-1):
 
 def lorentz_factor(x: torch.Tensor, *, c=1.0, dim=-1, keepdim=False):
     """
+    Calculate Lorenz factor in Klein coordinates.
+
     Parameters
     ----------
     x : tensor
@@ -90,9 +95,7 @@ def lorentz_factor(x: torch.Tensor, *, c=1.0, dim=-1, keepdim=False):
 
 
 def _drop_dims(tensor, dims):
-    """
-    Workaround to drop several dims in :func:`torch.squeeze`
-    """
+    # Workaround to drop several dims in :func:`torch.squeeze`.
     dims = _canonical_dims(dims, tensor.dim())
     slc = tuple(slice(None) if d not in dims else 0 for d in range(tensor.dim()))
     return tensor[slc]
@@ -120,6 +123,7 @@ def poincare_mean(xs, weights=None, *, reducedim=None, dim=-1, c=1.0, keepdim=Fa
         ball negative curvature
     keepdim : bool
         retain the last dim? (default: false)
+
     Returns
     -------
     tensor
@@ -184,13 +188,15 @@ def klein_mean(xs, weights=None, *, reducedim=None, dim=-1, c=1.0, keepdim=False
 
 def apply_radial(fn, input, basis, *, dim):
     """
-    Applies a given function along basis vector provided
+    Apply a given function along basis vector provided.
+
     Parameters
     ----------
     fn : callable
     input : tensor
     basis : tensor
     dim : int
+
     Returns
     -------
     tensor

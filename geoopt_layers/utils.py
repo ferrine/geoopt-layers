@@ -82,7 +82,7 @@ class Permute(torch.nn.Module):
 
     def inverse(self, contiguous=None):
         """
-        Invert the permutation
+        Invert the permutation.
 
         Parameters
         ----------
