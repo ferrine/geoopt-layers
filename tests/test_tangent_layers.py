@@ -12,7 +12,7 @@ def test_lambda_one_origin():
         geoopt_layers.TangentLambda(func, manifold=sphere)
     layer = geoopt_layers.TangentLambda(func, manifold=sphere, origin_shape=10)
     out = layer(point)
-    sphere.assert_attached(out)
+
     sphere.assert_check_point_on_manifold(out)
 
 
@@ -24,7 +24,7 @@ def test_lambda_two_origins():
         func, manifold=sphere, origin_shape=10, same_origin=False
     )
     out = layer(point)
-    sphere.assert_attached(out)
+
     sphere.assert_check_point_on_manifold(out)
 
 
@@ -75,7 +75,7 @@ def test_remap():
         target_origin_shape=13,
     )
     out = layer(point)
-    poincare.assert_attached(out)
+
     poincare.assert_check_point_on_manifold(out)
 
 
@@ -92,7 +92,7 @@ def test_remap_provided_origin():
         target_origin=poincare.origin(13),
     )
     out = layer(point)
-    poincare.assert_attached(out)
+
     poincare.assert_check_point_on_manifold(out)
 
 
@@ -107,16 +107,13 @@ def test_expmap():
     layer = geoopt_layers.Expmap(manifold=sphere, origin=sphere.origin(10))
     smth = torch.randn(12, 3, 10)
     out = layer(smth)
-    sphere.assert_attached(out)
+
     sphere.assert_check_point_on_manifold(out)
 
 
 def test_logmap():
     sphere = geoopt.Sphere()
     layer = geoopt_layers.Logmap(manifold=sphere, origin=sphere.origin(10))
-    smth = torch.randn(12, 3, 10)
-    with pytest.raises(RuntimeError):
-        layer(smth)
     out = layer(sphere.random(2, 30, 10))
     assert isinstance(out, torch.Tensor)
     assert not torch.isnan(out).any()

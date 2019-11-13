@@ -10,7 +10,7 @@ def create_origin(
     allow_none=False,
 ):
     if origin is not None:
-        manifold.assert_attached(origin)
+        pass
     elif origin_shape is None and not allow_none:
         raise ValueError(
             "`origin_shape` is the required parameter if origin is not provided"

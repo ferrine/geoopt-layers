@@ -52,7 +52,7 @@ class Distance2Centroids(torch.nn.Module):
         self.centroids.set_(self.manifold.random(self.centroids.shape))
 
     def forward(self, input):
-        self.manifold.assert_attached(input)
+
         input = input.unsqueeze(-self.manifold.ndim - 1)
         if self.squared:
             output = self.manifold.dist2(self.centroids, input)
