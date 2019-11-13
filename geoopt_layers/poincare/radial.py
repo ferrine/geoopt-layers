@@ -32,7 +32,7 @@ class Radial(ManifoldModule):
         if basis is None:
             basis = input
         result = apply_radial(self.fn, input, basis, dim=self.dim, norm=self.norm)
-        return self.ball.expmap0(result)
+        return self.ball.expmap0(result, dim=self.dim)
 
 
 class RadialNd(Radial):

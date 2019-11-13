@@ -1,5 +1,6 @@
 import geoopt
 import geoopt_layers
+import torch
 import pytest
 
 
@@ -107,4 +108,12 @@ def test_batch_norm():
     out = layer(point)
     assert out.shape == (2, 2, 5, 5)
 
+    ball.assert_check_point_on_manifold(out.permute(0, 2, 3, 1))
+
+
+def test_radial():
+    ball = geoopt.PoincareBall()
+    point = ball.random(2, 5, 5, 2).permute(0, 3, 1, 2)
+    layer = geoopt_layers.poincare.RadialNd(torch.nn.ELU(), ball=ball)
+    out = layer(point)
     ball.assert_check_point_on_manifold(out.permute(0, 2, 3, 1))
