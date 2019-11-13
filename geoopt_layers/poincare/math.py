@@ -186,21 +186,30 @@ def klein_mean(xs, weights=None, *, reducedim=None, dim=-1, c=1.0, keepdim=False
     return mean
 
 
-def apply_radial(fn, input, basis, *, dim):
+def apply_radial(fn, input, basis, *, dim, norm=True):
     """
     Apply a given function along basis vector provided.
 
     Parameters
     ----------
     fn : callable
+        function to apply
     input : tensor
+        input tensor
     basis : tensor
+        basis, would be normed to one if norm is True
     dim : int
+        reduce dimension
+    norm : bool
+        do we need to norm the basis?
 
     Returns
     -------
     tensor
+        result
     """
+    if norm:
+        basis = basis / basis.sum(dim=dim, keepdim=True)
     coef = (input * basis).sum(dim=dim, keepdim=True)
     result = fn(coef)
     return input + (result - coef) * basis

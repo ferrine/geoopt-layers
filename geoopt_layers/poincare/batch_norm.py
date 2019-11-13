@@ -23,7 +23,6 @@ class MobiusBatchNorm2d(ManifoldModule):
         self.beta2 = beta2
 
     def forward(self, input):
-
         return mobius_batch_norm2d(
             input=input,
             running_midpoint=self.running_midpoint,

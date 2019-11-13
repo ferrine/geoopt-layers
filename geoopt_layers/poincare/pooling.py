@@ -40,7 +40,6 @@ class MobiusAdaptiveAvgPool2d(torch.nn.AdaptiveAvgPool2d, ManifoldModule):
         self.ball = ball
 
     def forward(self, input):
-
         return mobius_adaptive_avg_pool2d(
             input, output_size=self.output_size, ball=self.ball
         )
@@ -69,7 +68,6 @@ class MobiusMaxPool2d(torch.nn.MaxPool2d, ManifoldModule):
         self.ball = ball
 
     def forward(self, input: torch.Tensor):
-
         return mobius_max_pool2d(
             input,
             kernel_size=self.kernel_size,
@@ -87,5 +85,4 @@ class MobiusAdaptiveMaxPool2d(torch.nn.AdaptiveMaxPool2d, ManifoldModule):
         self.ball = ball
 
     def forward(self, input: torch.Tensor):
-
         return mobius_adaptive_max_pool2d(input, self.output_size, self.return_indices)

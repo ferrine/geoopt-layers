@@ -82,7 +82,6 @@ class MobiusLinear(torch.nn.Linear, ManifoldModule):
         self.reset_parameters()
 
     def forward(self, input):
-
         return mobius_linear(
             input,
             weight=self.weight,
