@@ -8,6 +8,9 @@ class Radial(ManifoldModule):
     """
     Apply radial nonlinearity in poincare ball.
 
+    Point-wise nonlinearities male little sense in the Poincare ball, this function should help to
+    apply any kind of radial functions.
+
     Parameters
     ----------
     fn : callable
