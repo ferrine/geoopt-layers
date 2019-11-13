@@ -209,7 +209,7 @@ def apply_radial(fn, input, basis, *, dim, norm=True):
         result
     """
     if norm:
-        basis = basis / basis.sum(dim=dim, keepdim=True)
+        basis = basis / basis.norm(dim=dim, keepdim=True).clamp_min(1e-4)
     coef = (input * basis).sum(dim=dim, keepdim=True)
     result = fn(coef)
     return input + (result - coef) * basis
