@@ -19,6 +19,7 @@ class Radial(ManifoldModule):
     norm : bool
         do we need to norm basis vector?
     """
+
     def __init__(self, fn, dim=-1, *, ball, norm=True):
         super().__init__()
         self.fn = fn
