@@ -1,6 +1,17 @@
 import torch.nn
 import geoopt
-from .utils import ManifoldModule
+from .utils import ManifoldModule, Permuted
+
+
+__all__ = [
+    "TangentLambda",
+    "Remap",
+    "RemapLambda",
+    "Logmap",
+    "Expmap",
+    "Expmap2d",
+    "Logmap2d",
+]
 
 
 class TangentLambda(ManifoldModule):
@@ -189,7 +200,13 @@ class Remap(RemapLambda):
 
 
 class Expmap(ManifoldModule):
-    def __init__(self, manifold, origin=None, origin_shape=None, learn_origin=True):
+    def __init__(
+        self,
+        manifold: geoopt.manifolds.Manifold,
+        origin=None,
+        origin_shape=None,
+        learn_origin=True,
+    ):
         super().__init__()
         self.manifold = manifold
         self.register_origin("origin", manifold, origin, origin_shape, learn_origin)
@@ -200,7 +217,13 @@ class Expmap(ManifoldModule):
 
 
 class Logmap(ManifoldModule):
-    def __init__(self, manifold, origin=None, origin_shape=None, learn_origin=True):
+    def __init__(
+        self,
+        manifold: geoopt.manifolds.Manifold,
+        origin=None,
+        origin_shape=None,
+        learn_origin=True,
+    ):
         super().__init__()
         self.manifold = manifold
         self.register_origin("origin", manifold, origin, origin_shape, learn_origin)
@@ -208,3 +231,43 @@ class Logmap(ManifoldModule):
     def forward(self, input):
 
         return self.manifold.logmap(self.origin, input)
+
+
+class Expmap2d(Permuted, ManifoldModule):
+    def __init__(
+        self,
+        manifold: geoopt.manifolds.Manifold,
+        origin=None,
+        origin_shape=None,
+        learn_origin=True,
+        contiguous=True,
+    ):
+        if not manifold.ndim == 1:
+            raise ValueError("manifold.ndim is required to be 1")
+        expmap = Expmap(
+            manifold,
+            origin=origin,
+            origin_shape=origin_shape,
+            learn_origin=learn_origin,
+        )
+        super().__init__(expmap, (0, 2, 3, 1), contiguous=contiguous)
+
+
+class Logmap2d(Permuted, ManifoldModule):
+    def __init__(
+        self,
+        manifold: geoopt.manifolds.Manifold,
+        origin=None,
+        origin_shape=None,
+        learn_origin=True,
+        contiguous=True,
+    ):
+        if not manifold.ndim == 1:
+            raise ValueError("manifold.ndim is required to be 1")
+        logmap = Logmap(
+            manifold,
+            origin=origin,
+            origin_shape=origin_shape,
+            learn_origin=learn_origin,
+        )
+        super().__init__(logmap, (0, 2, 3, 1), contiguous=contiguous)

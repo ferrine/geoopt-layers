@@ -1,9 +1,10 @@
 from typing import Tuple, Union
 import geoopt.utils
+from .utils import ManifoldModule
 import torch
 
 
-class Distance2Centroids(torch.nn.Module):
+class Distance2Centroids(ManifoldModule):
     """
     Distance Layer.
 
@@ -61,7 +62,7 @@ class Distance2Centroids(torch.nn.Module):
         return output
 
 
-class PairwiseDistances(torch.nn.Module):
+class PairwiseDistances(ManifoldModule):
     """
     Pairwise Distance Layer.
 
