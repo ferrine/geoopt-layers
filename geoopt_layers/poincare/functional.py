@@ -1,6 +1,6 @@
 import geoopt
 import torch.nn.functional
-
+import torch.jit
 from geoopt_layers.poincare import math
 
 
@@ -49,7 +49,7 @@ def mobius_max_pool2d(
 def mobius_avg_pool2d(
     input, kernel_size, stride=None, padding=0, ceil_mode=False, *, ball
 ):
-    gamma = math.gamma_factor(input, dim=1, ball=ball, keepdim=True)
+    gamma = ball.lambda_x(input, dim=-3, keepdim=True)
     numerator = torch.nn.functional.avg_pool2d(
         input * gamma,
         kernel_size=kernel_size,
@@ -67,12 +67,12 @@ def mobius_avg_pool2d(
         count_include_pad=False,
     )
     output = numerator / denominator
-    output = ball.mobius_scalar_mul(0.5, output, dim=1)
+    output = ball.mobius_scalar_mul(0.5, output, dim=-3)
     return output
 
 
 def mobius_adaptive_avg_pool2d(input, output_size, *, ball):
-    gamma = math.gamma_factor(input, dim=-3, ball=ball, keepdim=True)
+    gamma = ball.lambda_x(input, dim=-3, keepdim=True)
     numerator = torch.nn.functional.adaptive_avg_pool2d(
         input * gamma, output_size=output_size
     )

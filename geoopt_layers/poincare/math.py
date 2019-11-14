@@ -3,7 +3,7 @@ import operator
 from geoopt.utils import canonical_manifold
 
 
-__all__ = ["poincare_mean", "poincare_lincomb", "gamma_factor", "apply_radial"]
+__all__ = ["poincare_mean", "poincare_lincomb", "apply_radial"]
 
 
 def idx2sign(idx, dim, neg=True):
@@ -53,11 +53,6 @@ def _reduce_dim(maxdim, reducedim, dim):
     return reducedim
 
 
-def gamma_factor(x, dim=-1, *, ball, keepdim=False):
-    c = canonical_manifold(ball).c
-    return 2.0 / (1 - c * x.pow(2).sum(dim, keepdim=keepdim).clamp_min(1e-6))
-
-
 def poincare_mean(xs, weights=None, *, ball, reducedim=None, dim=-1, keepdim=False):
     """
     Compute Einstein midpoint in Poincare coordinates.
@@ -83,7 +78,7 @@ def poincare_mean(xs, weights=None, *, ball, reducedim=None, dim=-1, keepdim=Fal
         Einstein midpoint in poincare coordinates
     """
     reducedim = _reduce_dim(xs.dim(), reducedim, dim)
-    gamma = gamma_factor(xs, dim=dim, ball=ball, keepdim=True)
+    gamma = ball.lambda_x(xs, dim=dim, keepdim=keepdim)
     if weights is None:
         weights = 1.0
     else:
