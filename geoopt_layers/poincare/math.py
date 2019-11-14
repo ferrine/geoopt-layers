@@ -182,7 +182,6 @@ def poincare_lincomb_einstein(
 
     References
     ----------
-
     .. [1] https://openreview.net/pdf?id=BJg73xHtvr
     """
     reducedim = _reduce_dim(xs.dim(), reducedim, dim)
