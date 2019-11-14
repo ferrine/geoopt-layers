@@ -47,6 +47,7 @@ class Distance2Centroids(ManifoldModule):
             torch.empty((num_centroids,) + centroid_shape), manifold=manifold
         )
         self.squared = squared
+        self.reset_parameters()
 
     @torch.no_grad()
     def reset_parameters(self):

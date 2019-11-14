@@ -49,42 +49,38 @@ def mobius_max_pool2d(
 def mobius_avg_pool2d(
     input, kernel_size, stride=None, padding=0, ceil_mode=False, *, ball
 ):
-    input = math.poincare2klein(input, dim=1, c=ball.c)
-    lorentz = math.lorentz_factor(input, dim=1, keepdim=True, c=ball.c)
-    input_avg = torch.nn.functional.avg_pool2d(
-        input * lorentz,
+    gamma = math.gamma_factor(input, dim=1, ball=ball)
+    numerator = torch.nn.functional.avg_pool2d(
+        input * gamma,
         kernel_size=kernel_size,
         stride=stride,
         padding=padding,
         ceil_mode=ceil_mode,
         count_include_pad=False,
     )
-    lorentz_avg = torch.nn.functional.avg_pool2d(
-        lorentz,
+    denominator = torch.nn.functional.avg_pool2d(
+        gamma - 1,
         kernel_size=kernel_size,
         stride=stride,
         padding=padding,
         ceil_mode=ceil_mode,
         count_include_pad=False,
     )
-    output = input_avg / lorentz_avg
-    output = math.klein2poincare(output, c=ball.c, dim=1)
-    output = ball.projx(output, dim=1)
+    output = numerator / denominator
+    output = ball.mobius_scalar_mul(0.5, output, dim=1)
     return output
 
 
 def mobius_adaptive_avg_pool2d(input, output_size, *, ball):
-    input = math.poincare2klein(input, c=ball.c, dim=1)
-    lorentz = math.lorentz_factor(input, dim=1, keepdim=True, c=ball.c)
-    input_avg = torch.nn.functional.adaptive_avg_pool2d(
-        input * lorentz, output_size=output_size
+    gamma = math.gamma_factor(input, dim=1, ball=ball)
+    numerator = torch.nn.functional.adaptive_avg_pool2d(
+        input * gamma, output_size=output_size
     )
-    lorentz_avg = torch.nn.functional.adaptive_avg_pool2d(
-        lorentz, output_size=output_size
+    denominator = torch.nn.functional.adaptive_avg_pool2d(
+        gamma - 1, output_size=output_size
     )
-    output = input_avg / lorentz_avg
-    output = math.klein2poincare(output, c=ball.c, dim=1)
-    output = ball.projx(output, dim=1)
+    output = numerator / denominator
+    output = ball.mobius_scalar_mul(0.5, output, dim=1)
     return output
 
 
@@ -101,7 +97,7 @@ def mobius_batch_norm2d(
     ball,
 ):
     if training:
-        midpoint = math.poincare_mean(input, dim=1, keepdim=True, c=ball.c)
+        midpoint = math.poincare_mean(input, dim=1, keepdim=True, ball=ball)
         midpoint = ball.projx(midpoint, dim=1)
         variance = ball.dist(midpoint, input, dim=1).pow(2).mean()
 

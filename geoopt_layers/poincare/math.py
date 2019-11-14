@@ -1,7 +1,9 @@
-import torch
 import functools
 import operator
-import geoopt
+from geoopt.utils import canonical_manifold
+
+
+__all__ = ["poincare_mean", "poincare_lincomb", "gamma_factor", "apply_radial"]
 
 
 def idx2sign(idx, dim, neg=True):
@@ -30,73 +32,6 @@ def idx2sign(idx, dim, neg=True):
         return idx % dim
 
 
-def poincare2klein(x, *, c=1.0, dim=-1):
-    """
-    Transform coordinates from Poincare to Klein.
-
-    Parameters
-    ----------
-    x : tensor
-        point on Poincare ball
-    c : float
-        negative curvature
-    dim : int
-        dimension to calculate conformal and Lorenz factors
-
-    Returns
-    -------
-    tensor
-        point on Klein disk
-    """
-    denom = 1 + c * x.pow(2).sum(dim=dim, keepdim=True)
-    return 2 * x / denom
-
-
-def klein2poincare(x, *, c=1.0, dim=-1):
-    """
-    Transform coordinates from Klein to Poincare.
-
-    Parameters
-    ----------
-    x : tensor
-        point on Klein disk
-    c : float
-        negative curvature
-    dim : int
-        dimension to calculate conformal and Lorenz factors
-
-    Returns
-    -------
-    tensor
-        point on Poincare ball
-    """
-    denom = 1 + torch.sqrt(1 - c * x.pow(2).sum(dim=dim, keepdim=True))
-    return x / denom
-
-
-def lorentz_factor(x: torch.Tensor, *, c=1.0, dim=-1, keepdim=False):
-    """
-    Calculate Lorenz factor in Klein coordinates.
-
-    Parameters
-    ----------
-    x : tensor
-        point on Klein disk
-    c : float
-        negative curvature
-    dim : int
-        dimension to calculate Lorenz factor
-    keepdim : bool
-        retain the last dim? (default: false)
-
-    Returns
-    -------
-    tensor
-        Lorenz factor
-    """
-    return 1 / torch.sqrt(1 - c * x.pow(2).sum(dim=dim, keepdim=keepdim))
-
-
 def _drop_dims(tensor, dims):
     # Workaround to drop several dims in :func:`torch.squeeze`.
     dims = _canonical_dims(dims, tensor.dim())
@@ -118,7 +53,12 @@ def _reduce_dim(maxdim, reducedim, dim):
     return reducedim
 
 
-def poincare_mean(xs, weights=None, *, reducedim=None, dim=-1, c=1.0, keepdim=False):
+def gamma_factor(x, dim=-1, *, ball):
+    c = canonical_manifold(ball).c
+    return 2.0 / (1 + c * x.pow(2).sum(dim, keepdim=True))
+
+
+def poincare_mean(xs, weights=None, *, ball, reducedim=None, dim=-1, keepdim=False):
     """
     Compute Einstein midpoint in Poincare coordinates.
 
@@ -132,8 +72,8 @@ def poincare_mean(xs, weights=None, *, reducedim=None, dim=-1, c=1.0, keepdim=Fa
         average dimension
     dim : int
         dimension to calculate conformal and Lorenz factors
-    c : float
-        ball negative curvature
+    ball : geoopt.Manifold
+        Poincare Ball
     keepdim : bool
         retain the last dim? (default: false)
 
@@ -142,20 +82,24 @@ def poincare_mean(xs, weights=None, *, reducedim=None, dim=-1, c=1.0, keepdim=Fa
     tensor
         Einstein midpoint in poincare coordinates
     """
-    xs = poincare2klein(xs, c=c, dim=dim)
-    # klein model
     reducedim = _reduce_dim(xs.dim(), reducedim, dim)
-    mean = klein_mean(
-        xs, weights=weights, reducedim=reducedim, dim=dim, c=c, keepdim=True
+    gamma = gamma_factor(xs, dim=dim, ball=ball)
+    if weights is None:
+        weights = 1.0
+    else:
+        weights = weights.unsqueeze(dim)
+    two_mean = (
+        gamma * weights * xs / ((gamma - 1) * weights).sum(reducedim, keepdim=True)
     )
-    mean = klein2poincare(mean, c=c, dim=dim)
+    mean = ball.mobius_scalar_mul(0.5, two_mean.sum(reducedim, keepdim=True))
+    # klein model
     if not keepdim:
         mean = _drop_dims(mean, reducedim)
     return mean
 
 
 def poincare_lincomb_einstein(
-    xs, weights=None, *, reducedim=None, dim=-1, c=1.0, keepdim=False
+    xs, weights=None, *, ball, reducedim=None, dim=-1, keepdim=False
 ):
     """
     Compute linear combination of Poincare points basing on Einstein midpoint [1]_.
@@ -170,8 +114,8 @@ def poincare_lincomb_einstein(
         average dimension
     dim : int
         dimension to calculate conformal and Lorenz factors
-    c : float
-        ball negative curvature
+    ball : geoopt.Manifold
+        Poincare Ball
     keepdim : bool
         retain the last dim? (default: false)
 
@@ -186,22 +130,20 @@ def poincare_lincomb_einstein(
     """
     reducedim = _reduce_dim(xs.dim(), reducedim, dim)
     midpoint = poincare_mean(
-        xs=xs, weights=weights, reducedim=reducedim, dim=dim, c=c, keepdim=True
+        xs=xs, weights=weights, reducedim=reducedim, dim=dim, ball=ball, keepdim=True
     )
     if weights is None:
         alpha = functools.reduce(operator.mul, (xs.shape[i] for i in reducedim), 1)
     else:
-        alpha = weights.unsqueeze(dim).expand_as(xs).sum(reducedim, keepdim=True)
-    point = geoopt.manifolds.poincare.math.mobius_scalar_mul(
-        alpha, midpoint, c=c, dim=dim
-    )
+        alpha = weights.unsqueeze(dim).sum(reducedim, keepdim=True)
+    point = ball.mobius_scalar_mul(alpha, midpoint, dim=dim)
     if not keepdim:
         point = _drop_dims(point, reducedim)
     return point
 
 
-def poincare_lincomb_tanget(
-    xs, weights=None, *, reducedim=None, dim=-1, c=1.0, keepdim=False, origin=None
+def poincare_lincomb_tangent(
+    xs, weights=None, *, ball, reducedim=None, dim=-1, keepdim=False, origin=None
 ):
     """
     Compute linear combination of Poincare points in tangent space [1]_.
@@ -216,8 +158,8 @@ def poincare_lincomb_tanget(
         average dimension
     dim : int
         dimension to calculate conformal and Lorenz factors
-    c : float
-        ball negative curvature
+    ball : geoopt.Manifold
+        Poincare Ball
     keepdim : bool
         retain the last dim? (default: false)
     origin : tensor
@@ -234,16 +176,16 @@ def poincare_lincomb_tanget(
     """
     reducedim = _reduce_dim(xs.dim(), reducedim, dim)
     if origin is None:
-        log_xs = geoopt.manifolds.poincare.math.logmap0(xs, c=c, dim=dim)
+        log_xs = ball.logmap0(xs, dim=dim)
     else:
-        log_xs = geoopt.manifolds.poincare.math.logmap(xs, origin, c=c, dim=dim)
+        log_xs = ball.logmap(xs, origin, dim=dim)
     if weights is not None:
         log_xs = weights.unsqueeze(dim) * log_xs
-    reduced = log_xs.sum(reducedim)
+    reduced = log_xs.sum(reducedim, keepdim=True)
     if origin is None:
-        ys = geoopt.manifolds.poincare.math.expmap0(reduced, c=c, dim=dim)
+        ys = ball.expmap0(reduced, ball, dim=dim)
     else:
-        ys = geoopt.manifolds.poincare.math.expmap(reduced, origin, c=c, dim=dim)
+        ys = ball.expmap(reduced, origin, dim=dim)
     if not keepdim:
         ys = _drop_dims(ys, reducedim)
     return ys
@@ -253,9 +195,9 @@ def poincare_lincomb(
     xs,
     weights=None,
     *,
+    ball,
     reducedim=None,
     dim=-1,
-    c=1.0,
     keepdim=False,
     method="einstein",
     origin=None
@@ -273,8 +215,8 @@ def poincare_lincomb(
         average dimension
     dim : int
         dimension to calculate conformal and Lorenz factors
-    c : float
-        ball negative curvature
+    ball : geoopt.Manifold
+        Poincare Ball
     keepdim : bool
         retain the last dim? (default: false)
     method : str
@@ -295,53 +237,23 @@ def poincare_lincomb(
     if method == "einstein":
         assert origin is None
         return poincare_lincomb_einstein(
-            xs=xs, weights=weights, reducedim=reducedim, dim=dim, c=c, keepdim=keepdim
-        )
-    else:
-        return poincare_lincomb_tanget(
             xs=xs,
             weights=weights,
             reducedim=reducedim,
             dim=dim,
-            c=c,
+            ball=ball,
+            keepdim=keepdim,
+        )
+    else:
+        return poincare_lincomb_tangent(
+            xs=xs,
+            weights=weights,
+            reducedim=reducedim,
+            dim=dim,
+            ball=ball,
             keepdim=keepdim,
             origin=origin,
         )
-
-
-def klein_mean(xs, weights=None, *, reducedim=None, dim=-1, c=1.0, keepdim=False):
-    """
-    Compute Einstein Midpoint in Klein coordinates.
-
-    Parameters
-    ----------
-    xs : tensor
-        points on Klein disk
-    weights : tensor
-        weights for averaging (make sure they broadcast correctly and manifold dimension is skipped)
-    reducedim : int|list[int]|tuple[int]
-        average dimension
-    dim : int
-        dimension to calculate conformal and Lorenz factors
-    c : float
-        ball negative curvature
-    keepdim : bool
-        retain the last dim? (default: false)
-
-    Returns
-    -------
-    tensor
-        Einstein midpoint in klein coordinates
-    """
-    lamb = lorentz_factor(xs, c=c, dim=dim, keepdim=True)
-    if weights is not None:
-        lamb = lamb * weights.unsqueeze(dim)
-    reducedim = _reduce_dim(xs.dim(), reducedim, dim)
-    mean = torch.sum((lamb * xs), dim=reducedim, keepdim=keepdim) / torch.sum(
-        lamb, keepdim=keepdim, dim=reducedim
-    ).clamp_min(1e-10)
-    # back to poincare
-    return mean
 
 
 def apply_radial(fn, input, basis, *, dim, norm=True):
