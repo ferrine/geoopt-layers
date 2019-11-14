@@ -4,9 +4,9 @@ import pytest
 import torch
 
 
-@pytest.fixture(autouse=True)
-def seed():
-    torch.manual_seed(45)
+@pytest.fixture(autouse=True, params=[42, 41])
+def seed(request):
+    torch.manual_seed(request.param)
 
 
 def test_linear_same_ball():
