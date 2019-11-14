@@ -62,7 +62,6 @@ class TangentLambda(ManifoldModule):
         self.fn = fn
 
     def forward(self, input):
-
         tangent = self.manifold.logmap(self.origin, input)
         out_tangent = self.fn(tangent)
         out_tangent = self.manifold.proju(self.origin, out_tangent)
@@ -143,7 +142,6 @@ class RemapLambda(ManifoldModule):
         self.fn = fn
 
     def forward(self, input):
-
         tangent = self.source_manifold.logmap(self.source_origin, input)
         out_tangent = self.fn(tangent)
         if self.source_manifold is self.target_manifold:
@@ -229,7 +227,6 @@ class Logmap(ManifoldModule):
         self.register_origin("origin", manifold, origin, origin_shape, learn_origin)
 
     def forward(self, input):
-
         return self.manifold.logmap(self.origin, input)
 
 
