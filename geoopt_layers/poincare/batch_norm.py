@@ -12,10 +12,14 @@ class MobiusBatchNorm2d(ManifoldModule):
     ):
         super().__init__()
         self.ball = ball
-        self.register_buffer("running_midpoint", torch.zeros(1, dimension, 1, 1))
-        self.register_buffer("running_variance", torch.ones(()))
+        dimension = geoopt.utils.size2shape(dimension)
+        self.register_buffer("running_midpoint", torch.zeros(*dimension, 1, 1))
+        self.register_buffer("running_variance", torch.ones(dimension[:-1] + (1, 1, 1)))
         if alpha:
-            self.register_parameter("alpha", geoopt.ManifoldParameter(torch.ones(())))
+            self.register_parameter(
+                "alpha",
+                geoopt.ManifoldParameter(torch.ones(dimension[:-1] + (1, 1, 1))),
+            )
         else:
             self.register_parameter("alpha", None)
         self.epsilon = epsilon

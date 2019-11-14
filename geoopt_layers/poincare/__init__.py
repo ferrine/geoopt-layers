@@ -11,4 +11,5 @@ from .centroids import (
     Distance2PoincareCentroids,
     Distance2PoincareCentroids2d,
     WeightedPoincareCentroids,
+    WeightedPoincareCentroids2d,
 )

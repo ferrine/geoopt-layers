@@ -97,23 +97,23 @@ def mobius_batch_norm2d(
     ball,
 ):
     if training:
-        midpoint = math.poincare_mean(input, dim=1, keepdim=True, ball=ball)
-        midpoint = ball.projx(midpoint, dim=1)
-        variance = ball.dist(midpoint, input, dim=1).pow(2).mean()
+        midpoint = math.poincare_mean(input, dim=-3, keepdim=True, ball=ball)
+        midpoint = ball.projx(midpoint, dim=-3)
+        variance = ball.dist(midpoint, input, dim=-3).pow(2).mean()
 
-        input = ball.mobius_add(-midpoint, input, dim=1)
+        input = ball.mobius_add(-midpoint, input, dim=-3)
         input = ball.mobius_scalar_mul(
-            alpha / (variance + epsilon) ** 0.5, input, dim=1
+            alpha / (variance + epsilon) ** 0.5, input, dim=-3
         )
         with torch.no_grad():
             running_variance.mul_(beta1).add_(1 - beta1, variance)
             running_midpoint.set_(
-                ball.geodesic(beta2, midpoint, running_midpoint, dim=1).data
+                ball.geodesic(beta2, midpoint, running_midpoint, dim=-3).data
             )
     else:
-        input = ball.mobius_add(-running_midpoint, input, dim=1)
+        input = ball.mobius_add(-running_midpoint, input, dim=-3)
         input = ball.mobius_scalar_mul(
-            alpha / (running_variance + epsilon) ** 0.5, input, dim=1
+            alpha / (running_variance + epsilon) ** 0.5, input, dim=-3
         )
     return input
 

@@ -77,3 +77,21 @@ class WeightedPoincareCentroids(ManifoldModule):
             method=self.method,
             origin=self.origin,
         )
+
+
+class WeightedPoincareCentroids2d(WeightedPoincareCentroids):
+    def forward(self, weights):
+        if self.origin is not None:
+            origin = self.origin.view(*self.origin.shape, 1, 1)
+        else:
+            origin = None
+        return poincare_lincomb(
+            self.centroids.view(*self.centroids.shape, 1, 1),
+            weights=weights,
+            reducedim=-4,
+            dim=-3,
+            ball=self.manifold,
+            keepdim=False,
+            method=self.method,
+            origin=origin,
+        )
