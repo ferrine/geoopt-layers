@@ -242,12 +242,18 @@ def poincare_lincomb_tanget(
     return ys
 
 
-def poincare_lincomb(xs, weights=None, *, reducedim=None, dim=-1, c=1.0, keepdim=False, method="einstein"):
+def poincare_lincomb(
+    xs, weights=None, *, reducedim=None, dim=-1, c=1.0, keepdim=False, method="einstein"
+):
     assert method in {"einstein", "tangent"}
     if method == "einstein":
-        return poincare_lincomb_einstein(xs=xs, weights=weights, reducedim=reducedim, dim=dim, c=c, keepdim=keepdim)
+        return poincare_lincomb_einstein(
+            xs=xs, weights=weights, reducedim=reducedim, dim=dim, c=c, keepdim=keepdim
+        )
     else:
-        return poincare_lincomb_tanget(xs=xs, weights=weights, reducedim=reducedim, dim=dim, c=c, keepdim=keepdim)
+        return poincare_lincomb_tanget(
+            xs=xs, weights=weights, reducedim=reducedim, dim=dim, c=c, keepdim=keepdim
+        )
 
 
 def klein_mean(xs, weights=None, *, reducedim=None, dim=-1, c=1.0, keepdim=False):
