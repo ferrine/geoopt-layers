@@ -72,7 +72,6 @@ class WeightedPoincareCentroids(ManifoldModule):
             weights=weights,
             reducedim=-2,
             dim=-1,
-            # it is independent of scaling
             ball=self.manifold,
             keepdim=False,
             method=self.method,
