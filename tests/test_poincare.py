@@ -4,6 +4,11 @@ import torch
 import pytest
 
 
+@pytest.fixture(autouse=True)
+def seed():
+    torch.manual_seed(46)
+
+
 def test_linear_same_ball():
     ball = geoopt.PoincareBall()
     point = ball.random(2, 3, 5)

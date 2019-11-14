@@ -5,6 +5,11 @@ import geoopt_layers
 import pytest
 
 
+@pytest.fixture(autouse=True)
+def seed():
+    torch.manual_seed(47)
+
+
 def test_lambda_one_origin():
     sphere = geoopt.Sphere()
     point = sphere.random(1, 10)

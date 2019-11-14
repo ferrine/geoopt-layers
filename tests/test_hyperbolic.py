@@ -1,6 +1,12 @@
 import geoopt
 import geoopt_layers
 import pytest
+import torch
+
+
+@pytest.fixture(autouse=True)
+def seed():
+    torch.manual_seed(45)
 
 
 def test_linear_same_ball():

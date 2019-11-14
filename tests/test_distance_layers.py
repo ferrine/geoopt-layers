@@ -1,5 +1,12 @@
 import geoopt
 import geoopt_layers
+import torch
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def seed():
+    torch.manual_seed(44)
 
 
 def test_distance2centroids():
