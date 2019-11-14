@@ -53,9 +53,9 @@ def _reduce_dim(maxdim, reducedim, dim):
     return reducedim
 
 
-def gamma_factor(x, dim=-1, *, ball):
+def gamma_factor(x, dim=-1, *, ball, keepdim=False):
     c = canonical_manifold(ball).c
-    return 2.0 / (1 + c * x.pow(2).sum(dim, keepdim=True))
+    return 2.0 / (1 - c * x.pow(2).sum(dim, keepdim=keepdim).clamp_min(1e-6))
 
 
 def poincare_mean(xs, weights=None, *, ball, reducedim=None, dim=-1, keepdim=False):
@@ -83,7 +83,7 @@ def poincare_mean(xs, weights=None, *, ball, reducedim=None, dim=-1, keepdim=Fal
         Einstein midpoint in poincare coordinates
     """
     reducedim = _reduce_dim(xs.dim(), reducedim, dim)
-    gamma = gamma_factor(xs, dim=dim, ball=ball)
+    gamma = gamma_factor(xs, dim=dim, ball=ball, keepdim=True)
     if weights is None:
         weights = 1.0
     else:
