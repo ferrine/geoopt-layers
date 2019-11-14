@@ -201,7 +201,7 @@ def poincare_lincomb_einstein(
 
 
 def poincare_lincomb_tanget(
-    xs, weights=None, *, reducedim=None, dim=-1, c=1.0, keepdim=False
+    xs, weights=None, *, reducedim=None, dim=-1, c=1.0, keepdim=False, origin=None
 ):
     """
     Compute linear combination of Poincare points in tangent space [1]_.
@@ -220,6 +220,8 @@ def poincare_lincomb_tanget(
         ball negative curvature
     keepdim : bool
         retain the last dim? (default: false)
+    origin : tensor
+        origin for logmap (make sure it broadcasts)
 
     Returns
     -------
@@ -231,27 +233,79 @@ def poincare_lincomb_tanget(
     .. [1] https://openreview.net/pdf?id=BJg73xHtvr
     """
     reducedim = _reduce_dim(xs.dim(), reducedim, dim)
-    log_xs = geoopt.manifolds.poincare.math.logmap0(xs, c=c, dim=dim)
+    if origin is None:
+        log_xs = geoopt.manifolds.poincare.math.logmap0(xs, c=c, dim=dim)
+    else:
+        log_xs = geoopt.manifolds.poincare.math.logmap(xs, origin, c=c, dim=dim)
     if weights is not None:
         log_xs = weights.unsqueeze(dim) * log_xs
     reduced = log_xs.sum(reducedim)
-    ys = geoopt.manifolds.poincare.math.expmap0(reduced, c=c, dim=dim)
+    if origin is None:
+        ys = geoopt.manifolds.poincare.math.expmap0(reduced, c=c, dim=dim)
+    else:
+        ys = geoopt.manifolds.poincare.math.expmap(reduced, origin, c=c, dim=dim)
     if not keepdim:
         ys = _drop_dims(ys, reducedim)
     return ys
 
 
 def poincare_lincomb(
-    xs, weights=None, *, reducedim=None, dim=-1, c=1.0, keepdim=False, method="einstein"
+    xs,
+    weights=None,
+    *,
+    reducedim=None,
+    dim=-1,
+    c=1.0,
+    keepdim=False,
+    method="einstein",
+    origin=None
 ):
+    """
+    Compute linear combination of Poincare points.
+
+    Parameters
+    ----------
+    xs : tensor
+        points on poincare ball
+    weights : tensor
+        weights for averaging (make sure they broadcast correctly and manifold dimension is skipped)
+    reducedim : int|list|tuple
+        average dimension
+    dim : int
+        dimension to calculate conformal and Lorenz factors
+    c : float
+        ball negative curvature
+    keepdim : bool
+        retain the last dim? (default: false)
+    method : str
+        one of ``{"einstein", "tangent"}``
+    origin : tensor
+        origin for logmap (make sure it broadcasts), for ``tangent`` method only
+
+    Returns
+    -------
+    tensor
+        Linear combination in Poincare ball
+
+    References
+    ----------
+    .. [1] https://openreview.net/pdf?id=BJg73xHtvr
+    """
     assert method in {"einstein", "tangent"}
     if method == "einstein":
+        assert origin is None
         return poincare_lincomb_einstein(
             xs=xs, weights=weights, reducedim=reducedim, dim=dim, c=c, keepdim=keepdim
         )
     else:
         return poincare_lincomb_tanget(
-            xs=xs, weights=weights, reducedim=reducedim, dim=dim, c=c, keepdim=keepdim
+            xs=xs,
+            weights=weights,
+            reducedim=reducedim,
+            dim=dim,
+            c=c,
+            keepdim=keepdim,
+            origin=origin,
         )
 
 
