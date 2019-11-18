@@ -1,7 +1,4 @@
-import functools
-import operator
-from geoopt.utils import canonical_manifold
-
+from ..utils import prod
 
 __all__ = ["poincare_mean", "poincare_lincomb", "apply_radial"]
 
@@ -128,7 +125,7 @@ def poincare_lincomb_einstein(
         xs=xs, weights=weights, reducedim=reducedim, dim=dim, ball=ball, keepdim=True
     )
     if weights is None:
-        alpha = functools.reduce(operator.mul, (xs.shape[i] for i in reducedim), 1)
+        alpha = prod((xs.shape[i] for i in reducedim))
     else:
         alpha = weights.unsqueeze(dim).sum(reducedim, keepdim=True)
     point = ball.mobius_scalar_mul(alpha, midpoint, dim=dim)

@@ -1,7 +1,9 @@
 import geoopt.utils
+import functools
+import operator
 import torch
 
-__all__ = ["Permute", "Permuted", "ManifoldModule"]
+__all__ = ["Permute", "Permuted", "ManifoldModule", "prod"]
 
 
 def create_origin(
@@ -119,3 +121,7 @@ class Permuted(torch.nn.Module):
         output = self.function(input)
         output = self.reverse_permutation(output)
         return output
+
+
+def prod(items):
+    return functools.reduce(operator.mul, (xs.shape[i] for i in reducedim), 1)
