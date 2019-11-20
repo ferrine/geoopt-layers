@@ -62,6 +62,14 @@ class Distance2Centroids(ManifoldModule):
             output = self.manifold.dist(self.centroids, input)
         return output
 
+    def extra_repr(self) -> str:
+        return (
+            "manifold={manifold}, "
+            "centroid_shape={centroid_shape}, "
+            "num_centroids={num_centroids}, "
+            "squared={squared}".format(**self.__dict__)
+        )
+
 
 class PairwiseDistances(ManifoldModule):
     """
@@ -112,3 +120,6 @@ class PairwiseDistances(ManifoldModule):
         else:
             output = manifold.dist(x, y)
         return output
+
+    def extra_repr(self) -> str:
+        return "manifold={manifold}, " "squared={squared}".format(**self.__dict__)
