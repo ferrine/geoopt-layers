@@ -182,6 +182,18 @@ def test_weighted_centroids(method):
     ball.assert_check_point_on_manifold(out)
 
 
+@pytest.mark.parametrize("method", ["tangent"])
+def test_weighted_centroids_zeros(method):
+    ball = geoopt.PoincareBall()
+    weights = torch.zeros(2, 5, 17)
+    layer = geoopt_layers.poincare.WeightedPoincareCentroids(
+        7, 17, method=method, ball=ball
+    )
+    out = layer(weights)
+    assert out.shape == (2, 5, 7)
+    ball.assert_check_point_on_manifold(out)
+
+
 @pytest.mark.parametrize("method", ["einstein", "tangent"])
 def test_weighted_centroids_2d(method):
     ball = geoopt.PoincareBall()

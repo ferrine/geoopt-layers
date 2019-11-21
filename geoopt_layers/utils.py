@@ -124,4 +124,4 @@ class Permuted(torch.nn.Module):
 
 
 def prod(items):
-    return functools.reduce(operator.mul, (xs.shape[i] for i in reducedim), 1)
+    return functools.reduce(operator.mul, items, 1)

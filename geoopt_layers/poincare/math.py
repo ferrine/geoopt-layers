@@ -1,4 +1,6 @@
 from ..utils import prod
+import torch
+
 
 __all__ = ["poincare_mean", "poincare_lincomb", "apply_radial"]
 

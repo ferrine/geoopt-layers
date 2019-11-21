@@ -24,6 +24,7 @@ class Distance2PoincareCentroids(distance.Distance2Centroids):
                 self.centroids.shape, std=self.std / self.centroid_shape[-1] ** 0.5
             )
         )
+        self.centroids[0] = 0.0
 
 
 class Distance2PoincareCentroids2d(Distance2PoincareCentroids):
@@ -85,6 +86,7 @@ class WeightedPoincareCentroids(ManifoldModule):
                 device=self.centroids.device,
             )
         )
+        self.centroids[0] = 0.0
         if self.origin is not None:
             self.origin.set_(
                 self.manifold.origin(
