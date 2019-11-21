@@ -6,7 +6,10 @@ import torch
 
 
 class Distance2PoincareCentroids(distance.Distance2Centroids):
-    def __init__(self, centroid_shape: int, num_centroids: int, squared=True, *, ball):
+    def __init__(
+        self, centroid_shape: int, num_centroids: int, squared=True, *, ball, std=1.0
+    ):
+        self.std = std
         super().__init__(
             ball,
             centroid_shape=centroid_shape,
@@ -18,7 +21,7 @@ class Distance2PoincareCentroids(distance.Distance2Centroids):
     def reset_parameters(self):
         self.centroids.set_(
             self.manifold.random(
-                self.centroids.shape, std=(1 / self.centroid_shape[-1]) ** 0.5
+                self.centroids.shape, std=self.std / self.centroid_shape[-1] ** 0.5
             )
         )
 
@@ -44,13 +47,14 @@ class WeightedPoincareCentroids(ManifoldModule):
         *,
         ball,
         learn_origin=True,
+        std=1.0
     ):
         super().__init__()
 
         if not isinstance(num_centroids, int) or num_centroids < 1:
             raise TypeError("num_centroids should be int > 0")
         self.centroid_shape = centroid_shape = geoopt.utils.size2shape(centroid_shape)
-
+        self.std = std
         self.num_centroids = num_centroids
         self.manifold = ball
         self.method = method
@@ -74,9 +78,20 @@ class WeightedPoincareCentroids(ManifoldModule):
     def reset_parameters(self):
         self.centroids.set_(
             self.manifold.random(
-                self.centroids.shape, std=(1 / self.centroid_shape[-1]) ** 0.5
+                self.centroids.shape,
+                std=self.std / self.centroid_shape[-1] ** 0.5,
+                dtype=self.centroids.dtype,
+                device=self.centroids.device,
             )
         )
+        if self.origin is not None:
+            self.origin.set_(
+                self.manifold.origin(
+                    self.origin.shape,
+                    dtype=self.centroids.dtype,
+                    device=self.centroids.device,
+                )
+            )
 
     def forward(self, weights):
         return poincare_lincomb(

@@ -51,7 +51,13 @@ class Distance2Centroids(ManifoldModule):
 
     @torch.no_grad()
     def reset_parameters(self):
-        self.centroids.set_(self.manifold.random(self.centroids.shape))
+        self.centroids.set_(
+            self.manifold.random(
+                self.centroids.shape,
+                dtype=self.centroids.dtype,
+                device=self.centroids.device,
+            )
+        )
 
     def forward(self, input):
 
