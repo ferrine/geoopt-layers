@@ -107,11 +107,11 @@ class WeightedPoincareCentroids(ManifoldModule):
 
     def extra_repr(self) -> str:
         return (
-            "manifold={manifold}, "
+            "manifold={self.manifold}, "
             "centroid_shape={centroid_shape}, "
             "num_centroids={num_centroids}, "
             "method={method}, "
-            "learn_origin={learn_origin}".format(**self.__dict__)
+            "learn_origin={learn_origin}".format(**self.__dict__, self=self)
         )
 
 
