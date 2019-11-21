@@ -72,6 +72,7 @@ class WeightedPoincareCentroids(ManifoldModule):
             allow_none=True,
             parameter=learn_origin,
         )
+        self.learn_origin = learn_origin and method == "tangent"
         self.reset_parameters()
 
     @torch.no_grad()
