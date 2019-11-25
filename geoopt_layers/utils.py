@@ -3,7 +3,7 @@ import functools
 import operator
 import torch
 
-__all__ = ["Permute", "Permuted", "ManifoldModule", "prod"]
+__all__ = ["Permute", "Permuted", "ManifoldModule", "prod", "Reshape"]
 
 
 def create_origin(
@@ -102,6 +102,9 @@ class Permute(torch.nn.Module):
             contiguous = self.contiguous
         return self.__class__(*reverse_permute, contiguous=contiguous)
 
+    def extra_repr(self) -> str:
+        return " ".join(map(str, self.permutation))
+
 
 class Permuted(torch.nn.Module):
     """
@@ -122,6 +125,42 @@ class Permuted(torch.nn.Module):
         output = self.reverse_permutation(output)
         return output
 
+    def extra_repr(self) -> str:
+        return " ".join(map(str, self.forward_permutation.permutation))
+
 
 def prod(items):
     return functools.reduce(operator.mul, items, 1)
+
+
+def reshape_shape(shape, pattern):
+    out_shape = []
+    i = 0
+    for s in pattern:
+        if isinstance(s, int):
+            break
+        out_shape.append(shape[i])
+        i += 1
+    for s in pattern[i:]:
+        if s == "*":
+            break
+        out_shape.append(pattern[i])
+        i += 1
+
+    for j, s in enumerate(reversed(pattern[i:])):
+        out_shape.insert(i, shape[-j - 1])
+
+    return out_shape
+
+
+class Reshape(torch.nn.Module):
+    def __init__(self, *pattern):
+        super().__init__()
+        self.pattern = list(pattern)
+
+    def forward(self, input: torch.Tensor):
+        out_shape = reshape_shape(input.shape, self.pattern)
+        return input.reshape(out_shape)
+
+    def extra_repr(self) -> str:
+        return " ".join(map(str, self.pattern))

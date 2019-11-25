@@ -28,7 +28,7 @@ class Distance2Centroids(ManifoldModule):
         manifold: geoopt.manifolds.Manifold,
         centroid_shape: Union[int, Tuple[int]],
         num_centroids: int,
-        squared=True,
+        squared=False,
     ):
         super().__init__()
 
@@ -92,7 +92,7 @@ class PairwiseDistances(ManifoldModule):
     manifold : Optional[geoopt.manifold.Manifold]
     """
 
-    def __init__(self, dim: int, squared=True, manifold=None):
+    def __init__(self, dim: int, squared=False, manifold=None):
         super().__init__()
         self.squared = squared
         self.dim = dim

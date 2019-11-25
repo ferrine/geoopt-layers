@@ -7,7 +7,7 @@ import torch
 
 class Distance2PoincareCentroids(distance.Distance2Centroids):
     def __init__(
-        self, centroid_shape: int, num_centroids: int, squared=True, *, ball, std=1.0
+        self, centroid_shape: int, num_centroids: int, squared=False, *, ball, std=1.0
     ):
         self.std = std
         super().__init__(
