@@ -1,34 +1,7 @@
+from geoopt_layers.utils import idx2sign
 from ..utils import prod
-import torch
-
 
 __all__ = ["poincare_mean", "poincare_lincomb", "apply_radial"]
-
-
-def idx2sign(idx, dim, neg=True):
-    """
-    Unify idx to be negative or positive, that helps in cases of broadcasting.
-
-    Parameters
-    ----------
-    idx : int
-        current index
-    dim : int
-        maximum dimension
-    neg : bool
-        indicate we need negative index
-
-    Returns
-    -------
-    int
-    """
-    if neg:
-        if idx < 0:
-            return idx
-        else:
-            return (idx + 1) % -(dim + 1)
-    else:
-        return idx % dim
 
 
 def _drop_dims(tensor, dims):

@@ -3,7 +3,7 @@ import functools
 import operator
 import torch
 
-__all__ = ["Permute", "Permuted", "ManifoldModule", "prod", "Reshape"]
+__all__ = ["Permute", "Permuted", "ManifoldModule", "prod", "Reshape", "idx2sign"]
 
 
 def create_origin(
@@ -164,3 +164,29 @@ class Reshape(torch.nn.Module):
 
     def extra_repr(self) -> str:
         return " ".join(map(str, self.pattern))
+
+
+def idx2sign(idx, dim, neg=True):
+    """
+    Unify idx to be negative or positive, that helps in cases of broadcasting.
+
+    Parameters
+    ----------
+    idx : int
+        current index
+    dim : int
+        maximum dimension
+    neg : bool
+        indicate we need negative index
+
+    Returns
+    -------
+    int
+    """
+    if neg:
+        if idx < 0:
+            return idx
+        else:
+            return (idx + 1) % -(dim + 1)
+    else:
+        return idx % dim

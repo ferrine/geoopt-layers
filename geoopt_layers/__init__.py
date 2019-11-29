@@ -7,7 +7,7 @@ from .tangent import (
     Expmap2d,
     Logmap2d,
 )
-from .distance import Distance2Centroids, PairwiseDistances
+from .distance import Distance2Centroids, PairwiseDistances, KNN, KNNIndex
 from .utils import Permute, Reshape
 from . import poincare
 from . import tangent

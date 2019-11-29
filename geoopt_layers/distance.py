@@ -1,7 +1,10 @@
 from typing import Tuple, Union
 import geoopt.utils
-from .utils import ManifoldModule
+from .utils import ManifoldModule, idx2sign, prod
+from .functional import pairwise_distances
 import torch
+
+__all__ = ["Distance2Centroids", "PairwiseDistances", "KNN", "KNNIndex"]
 
 
 class Distance2Centroids(ManifoldModule):
@@ -85,49 +88,90 @@ class PairwiseDistances(ManifoldModule):
 
     Parameters
     ----------
+    manifold : Optional[geoopt.manifold.Manifold]
     dim : int
         compute pairwise distance for this shape
     squared : True
         compute squared distance? (default: True)
-    manifold : Optional[geoopt.manifold.Manifold]
     """
 
-    def __init__(self, dim: int, squared=False, manifold=None):
+    def __init__(self, manifold, dim: int, squared=False):
         super().__init__()
         self.squared = squared
+        if dim == -1:
+            raise ValueError("dim should be not the last one")
         self.dim = dim
         self.manifold = manifold
 
     def forward(self, x, y=None):
-        if y is None:
-            y = x
-        if self.manifold is None and (
-            not isinstance(x, geoopt.ManifoldTensor)
-            or not isinstance(y, geoopt.ManifoldTensor)
-            or x.manifold is not y.manifold
-        ):
-            raise RuntimeError(
-                "Input should be a ManifoldTensor and all inputs should share the same manifold"
-            )
-        elif self.manifold is not None:
-            if isinstance(x, geoopt.ManifoldTensor) and x.manifold is not self.manifold:
-                raise RuntimeError("Manifolds do not match")
-            if isinstance(y, geoopt.ManifoldTensor) and y.manifold is not self.manifold:
-                raise RuntimeError("Manifolds do not match")
-        manifold = self.manifold or x.manifold
-        if self.dim < 0:
-            x = x.unsqueeze(self.dim)
-            y = y.unsqueeze(self.dim - 1)
-        else:
-            x = x.unsqueeze(self.dim + 1)
-            y = y.unsqueeze(self.dim)
-        if self.squared:
-            output = manifold.dist2(x, y)
-        else:
-            output = manifold.dist(x, y)
-        return output
+        return pairwise_distances(
+            x=x, y=y, dim=self.dim, squared=self.squared, manifold=self.manifold
+        )
 
     def extra_repr(self) -> str:
         return "manifold={self.manifold}, squared={squared}".format(
             **self.__dict__, self=self
         )
+
+
+class KNNIndex(PairwiseDistances):
+    def __init__(self, manifold, k: int, dim: int, squared: bool = False):
+        super().__init__(manifold=manifold, dim=dim, squared=squared)
+        self.k = k
+
+    @torch.no_grad()
+    def forward(self, x, y=None):
+        distances = super().forward(x, y)
+        dim = idx2sign(self.dim, distances.dim()) + 1
+        idx = distances.topk(k=self.k, dim=dim, largest=False)[1]
+        return idx
+
+
+def swap_end_dims(x, *dims):
+    for i, dim in zip(range(-len(dims), 0), dims):
+        j = idx2sign(dim, x.dim())
+        if j == i:
+            continue
+        else:
+            x = x.transpose(i, j)
+    return x
+
+
+class KNN(KNNIndex):
+    def forward(self, x, y=None):
+        if y is None:
+            y = x
+        # x : [..., n_elements_x, ..., D]
+        #               dim
+        # y : [..., n_elements_y, ..., D]
+        #               dim
+        idx = super().forward(x, y)
+        # idx : [..., n_elements_x,  k,   ...]
+        #                dim     dim + 1
+        dim = idx2sign(self.dim, idx.dim(), neg=True)
+        idx_loc = swap_end_dims(idx, dim, dim + 1)
+        # idx : [..., d-2,    d-1,    ..., n_elements_x,  k \in [0, n_elements_y]]
+        #            dim    dim+1
+        y = y.unsqueeze(dim - 1)
+        # y : [..., 1, n_elements_y, ..., D]
+        #          dim      dim+1
+        y = swap_end_dims(y, dim - 1, dim, -1).contiguous()
+        # y : [..., d-3, d-2, ..., 1, n_elements_y, D]
+        #          dim   dim+1
+        y = y.expand(idx_loc.shape[:-1] + y.shape[-2:])
+        # y : [..., d-3, d-2, .., n_elements_x, n_elements_y, D]
+        flat_y = y.reshape(-1, y.size(-1))
+        batch_size = prod(y.shape[:-3])
+        n_elements_x = y.shape[-3]
+        flat_idx = idx_loc.reshape(-1, idx_loc.size(-2), idx_loc.size(-1))
+        shift = (
+            torch.arange(0, n_elements_x * batch_size, n_elements_x, device=y.device)
+        ).view(-1, 1, 1)
+        flat_idx += shift
+        top_k_out = flat_y[idx_loc]
+        # y : [..., -2, -1, ..., n_elements_x, k, D]
+        #          dim-1  dim
+        top_k_out = swap_end_dims(top_k_out, dim - 1, dim, -1)
+        # y : [..., n_elements_x, k, ... D]
+        #            dim-1       dim
+        return top_k_out
