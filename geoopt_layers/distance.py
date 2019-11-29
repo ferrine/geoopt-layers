@@ -115,16 +115,28 @@ class PairwiseDistances(ManifoldModule):
 
 
 class KNNIndex(PairwiseDistances):
-    def __init__(self, manifold, k: int, dim: int, squared: bool = False):
+    """
+    K Nearest Neighbors on the manifold.
+
+
+    """
+
+    def __init__(
+        self, manifold, k: int, dim: int, squared: bool = False, return_distances=False
+    ):
         super().__init__(manifold=manifold, dim=dim, squared=squared)
         self.k = k
+        self.return_distances = return_distances
 
     @torch.no_grad()
     def forward(self, x, y=None):
         distances = super().forward(x, y)
         dim = idx2sign(self.dim, distances.dim()) + 1
-        idx = distances.topk(k=self.k, dim=dim, largest=False)[1]
-        return idx
+        distances, idx = distances.topk(k=self.k, dim=dim, largest=False)
+        if self.return_distances:
+            return distances, idx
+        else:
+            return idx
 
 
 def swap_end_dims(x, *dims):
@@ -138,40 +150,16 @@ def swap_end_dims(x, *dims):
 
 
 class KNN(KNNIndex):
+    def __init__(self, manifold, k: int, dim: int, squared: bool = False):
+        super().__init__(manifold=manifold, k=k, dim=dim, squared=squared)
+
     def forward(self, x, y=None):
         if y is None:
             y = x
-        # x : [..., n_elements_x, ..., D]
-        #               dim
-        # y : [..., n_elements_y, ..., D]
-        #               dim
         idx = super().forward(x, y)
-        # idx : [..., n_elements_x,  k,   ...]
-        #                dim     dim + 1
-        dim = idx2sign(self.dim, idx.dim(), neg=True)
-        idx_loc = swap_end_dims(idx, dim, dim + 1)
-        # idx : [..., d-2,    d-1,    ..., n_elements_x,  k \in [0, n_elements_y]]
-        #            dim    dim+1
-        y = y.unsqueeze(dim - 1)
-        # y : [..., 1, n_elements_y, ..., D]
-        #          dim      dim+1
-        y = swap_end_dims(y, dim - 1, dim, -1).contiguous()
-        # y : [..., d-3, d-2, ..., 1, n_elements_y, D]
-        #          dim   dim+1
-        y = y.expand(idx_loc.shape[:-1] + y.shape[-2:])
-        # y : [..., d-3, d-2, .., n_elements_x, n_elements_y, D]
-        flat_y = y.reshape(-1, y.size(-1))
-        batch_size = prod(y.shape[:-3])
-        n_elements_x = y.shape[-3]
-        flat_idx = idx_loc.reshape(-1, idx_loc.size(-2), idx_loc.size(-1))
-        shift = (
-            torch.arange(0, n_elements_x * batch_size, n_elements_x, device=y.device)
-        ).view(-1, 1, 1)
-        flat_idx += shift
-        top_k_out = flat_y[idx_loc]
-        # y : [..., -2, -1, ..., n_elements_x, k, D]
-        #          dim-1  dim
-        top_k_out = swap_end_dims(top_k_out, dim - 1, dim, -1)
-        # y : [..., n_elements_x, k, ... D]
-        #            dim-1       dim
+        dim = idx2sign(self.dim, idx.dim())
+        y = y.unsqueeze(dim)
+        idx = idx.view(idx.shape + (1,) * self.manifold.ndim)
+        y, idx = torch.broadcast_tensors(y, idx)
+        top_k_out = torch.gather(y, dim - 1, idx)
         return top_k_out
