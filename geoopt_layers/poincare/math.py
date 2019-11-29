@@ -50,7 +50,7 @@ def poincare_mean(xs, weights=None, *, ball, reducedim=None, dim=-1, keepdim=Fal
         Einstein midpoint in poincare coordinates
     """
     reducedim = _reduce_dim(xs.dim(), reducedim, dim)
-    gamma = ball.lambda_x(xs, dim=dim, keepdim=keepdim)
+    gamma = ball.lambda_x(xs, dim=dim, keepdim=True)
     if weights is None:
         weights = 1.0
     else:
