@@ -73,6 +73,7 @@ def test_knn():
     points = man.random(10, 9)
     knn_points = layer(points)
     assert knn_points.shape == (10, 5, 9)
+    man.assert_check_point_on_manifold(knn_points)
 
 
 def test_knn_permutations():
@@ -87,4 +88,5 @@ def test_knn_permutations():
     knn_points_2 = layer(perm1(points))
     assert knn_points_2.shape == (9, 7, 1, 2, 3, 5)
     knn_points_2 = knn_points_2.permute(2, 3, 4, 0, 1, 5)
+    man.assert_check_point_on_manifold(knn_points_1)
     np.testing.assert_allclose(knn_points_1, knn_points_2)
