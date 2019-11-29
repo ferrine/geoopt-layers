@@ -8,7 +8,15 @@ __all__ = ["MobiusBatchNorm2d"]
 
 class MobiusBatchNorm2d(ManifoldModule):
     def __init__(
-        self, dimension, alpha=True, epsilon=1e-4, beta1=0.9, beta2=0.9, *, ball
+        self,
+        dimension,
+        alpha=True,
+        bias=False,
+        epsilon=1e-4,
+        beta1=0.9,
+        beta2=0.9,
+        *,
+        ball,
     ):
         super().__init__()
         self.ball = ball
@@ -22,9 +30,22 @@ class MobiusBatchNorm2d(ManifoldModule):
             )
         else:
             self.register_parameter("alpha", None)
+        if bias:
+            self.register_parameter(
+                "bias", geoopt.ManifoldParameter(torch.zeros(dimension), manifold=ball)
+            )
+        else:
+            self.register_parameter("bias", None)
         self.epsilon = epsilon
         self.beta1 = beta1
         self.beta2 = beta2
+
+    @property
+    def bias_view(self):
+        if self.bias is not None:
+            return self.bias.view(self.bias.shape + (1, 1))
+        else:
+            return None
 
     def forward(self, input):
         return mobius_batch_norm2d(
@@ -32,6 +53,7 @@ class MobiusBatchNorm2d(ManifoldModule):
             running_midpoint=self.running_midpoint,
             running_variance=self.running_variance,
             alpha=self.alpha,
+            bias=self.bias_view,
             training=self.training,
             beta1=self.beta1,
             beta2=self.beta2,
@@ -40,10 +62,11 @@ class MobiusBatchNorm2d(ManifoldModule):
         )
 
     def extra_repr(self):
-        return "{dimension}, eps={epsilon}, beta1={beta1}, beta2={beta2}, alpha={alpha}, c={c}".format(
+        return "{dimension}, eps={epsilon}, beta1={beta1}, beta2={beta2}, alpha={alpha}, bias={bias}".format(
             **self.__dict__,
             alpha=self.alpha is not None,
-            dimension=self.running_midpoint.size(1),
+            bias=self.bias is not None,
+            dimension=self.running_midpoint.shape[:-2],
         )
 
     @torch.no_grad()
@@ -52,3 +75,5 @@ class MobiusBatchNorm2d(ManifoldModule):
         self.running_variance.ones_()
         if self.alpha is not None:
             self.alpha.ones_()
+        if self.bias is not None:
+            self.bias.zero_()

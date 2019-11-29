@@ -90,23 +90,28 @@ def mobius_batch_norm2d(
     running_variance,
     beta1,
     beta2,
-    alpha=1.0,
+    alpha=None,
+    bias=None,
     epsilon=1e-4,
     training=True,
     *,
     ball,
 ):
+    if alpha is None:
+        alpha = 1.0
     if training:
-        midpoint = math.poincare_mean(input, dim=-3, keepdim=True, ball=ball)
-        midpoint = ball.projx(midpoint, dim=-3)
-        variance = ball.dist(midpoint, input, dim=-3).pow(2).mean()
-
+        reduce_dim = (-1, -2) + tuple(range(-input.dim(), -running_midpoint.dim()))
+        midpoint = math.poincare_mean(
+            input, dim=-3, reducedim=reduce_dim, keepdim=True, ball=ball
+        )
+        variance = ball.dist2(midpoint, input, dim=-3, keepdim=True)
+        variance = variance.mean(dim=reduce_dim, keepdim=True)
         input = ball.mobius_add(-midpoint, input, dim=-3)
         input = ball.mobius_scalar_mul(
             alpha / (variance + epsilon) ** 0.5, input, dim=-3
         )
         with torch.no_grad():
-            running_variance.mul_(beta1).add_(1 - beta1, variance)
+            running_variance.lerp_(variance.view_as(running_variance), beta1)
             running_midpoint.set_(
                 ball.geodesic(beta2, midpoint, running_midpoint, dim=-3).data
             )
@@ -115,6 +120,8 @@ def mobius_batch_norm2d(
         input = ball.mobius_scalar_mul(
             alpha / (running_variance + epsilon) ** 0.5, input, dim=-3
         )
+    if bias is not None:
+        input = ball.mobius_add(input, bias, dim=-3)
     return input
 
 

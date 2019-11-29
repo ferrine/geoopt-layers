@@ -106,10 +106,11 @@ def test_adaptive_avg_pool():
     ball.assert_check_point_on_manifold(out.permute(0, 2, 3, 1))
 
 
-def test_batch_norm():
+@pytest.mark.parametrize("bias", [True, False], ids=["bias", "no-bias"])
+def test_batch_norm(bias):
     ball = geoopt.PoincareBall()
     point = ball.random(2, 5, 5, 2).permute(0, 3, 1, 2)
-    layer = geoopt_layers.poincare.MobiusBatchNorm2d(2, ball=ball)
+    layer = geoopt_layers.poincare.MobiusBatchNorm2d(2, ball=ball, bias=bias)
     out = layer(point)
     assert out.shape == (2, 2, 5, 5)
 
