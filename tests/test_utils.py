@@ -1,10 +1,12 @@
 import geoopt_layers
 import torch
 
+import geoopt_layers.shape
+
 
 def test_permute():
     ten = torch.randn(1, 2, 3, 4)
-    perm = geoopt_layers.Permute(0, 2, 1, 3)
+    perm = geoopt_layers.shape.Permute(0, 2, 1, 3)
     ten1 = perm(ten)
 
     invperm = perm.inverse()

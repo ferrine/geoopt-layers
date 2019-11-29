@@ -1,7 +1,7 @@
 import torch.nn
 import geoopt
-from .utils import ManifoldModule, Permuted
-
+from .utils import ManifoldModule
+from geoopt_layers.shape import Permuted
 
 __all__ = [
     "TangentLambda",

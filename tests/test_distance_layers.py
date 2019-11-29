@@ -4,6 +4,8 @@ import torch
 import numpy as np
 import pytest
 
+import geoopt_layers.shape
+
 
 @pytest.fixture(autouse=True, params=[42, 41])
 def seed(request):
@@ -83,7 +85,7 @@ def test_knn_permutations():
     knn_points_1 = layer(points)
     assert knn_points_1.shape == (1, 2, 3, 9, 7, 5)
 
-    perm1 = geoopt_layers.Permute(3, 0, 1, 2, 4, contiguous=True)
+    perm1 = geoopt_layers.shape.Permute(3, 0, 1, 2, 4, contiguous=True)
     layer = geoopt_layers.KNN(manifold=man, dim=0, k=7)
     knn_points_2 = layer(perm1(points))
     assert knn_points_2.shape == (9, 7, 1, 2, 3, 5)
