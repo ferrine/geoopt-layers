@@ -1,6 +1,7 @@
 import geoopt
 import torch.nn.functional
 import torch.jit
+import functools
 from geoopt_layers.poincare import math
 
 
@@ -84,7 +85,7 @@ def mobius_adaptive_avg_pool2d(input, output_size, *, ball):
     return output
 
 
-def mobius_batch_norm2d(
+def mobius_batch_norm_nd(
     input,
     running_midpoint,
     running_variance,
@@ -96,33 +97,49 @@ def mobius_batch_norm2d(
     training=True,
     *,
     ball,
+    n,
 ):
+    dim = -n - 1
     if alpha is None:
         alpha = 1.0
+    else:
+        alpha = alpha.view(alpha.shape + (1,) * n)
     if training:
-        reduce_dim = (-1, -2) + tuple(range(-input.dim(), -running_midpoint.dim()))
-        midpoint = math.poincare_mean(
-            input, dim=-3, reducedim=reduce_dim, keepdim=True, ball=ball
+        reduce_dim = tuple(range(-n, 0)) + tuple(
+            range(-input.dim(), -running_midpoint.dim() - n)
         )
-        variance = ball.dist2(midpoint, input, dim=-3, keepdim=True)
+        midpoint = math.poincare_mean(
+            input, dim=dim, reducedim=reduce_dim, keepdim=True, ball=ball
+        )
+        variance = ball.dist2(midpoint, input, dim=dim, keepdim=True)
         variance = variance.mean(dim=reduce_dim, keepdim=True)
-        input = ball.mobius_add(-midpoint, input, dim=-3)
+        input = ball.mobius_add(-midpoint, input, dim=dim)
         input = ball.mobius_scalar_mul(
-            alpha / (variance + epsilon) ** 0.5, input, dim=-3
+            alpha / (variance + epsilon) ** 0.5, input, dim=dim
         )
         with torch.no_grad():
             running_variance.lerp_(variance.view_as(running_variance), beta1)
             running_midpoint.set_(
-                ball.geodesic(beta2, midpoint, running_midpoint, dim=-3).data
+                ball.geodesic(
+                    beta2, midpoint.view_as(running_midpoint), running_midpoint, dim=-1
+                )
             )
     else:
-        input = ball.mobius_add(-running_midpoint, input, dim=-3)
+        running_midpoint = running_midpoint.view(running_midpoint.shape + (1,) * n)
+        running_variance = running_variance.view(running_variance.shape + (1,) * n)
+        input = ball.mobius_add(-running_midpoint, input, dim=dim)
         input = ball.mobius_scalar_mul(
-            alpha / (running_variance + epsilon) ** 0.5, input, dim=-3
+            alpha / (running_variance + epsilon) ** 0.5, input, dim=dim
         )
     if bias is not None:
-        input = ball.mobius_add(input, bias, dim=-3)
+        bias = bias.view(bias.shape + (1,) * n)
+        input = ball.mobius_add(input, bias, dim=dim)
     return input
+
+
+mobius_batch_norm = functools.partial(mobius_batch_norm_nd, n=0)
+mobius_batch_norm1d = functools.partial(mobius_batch_norm_nd, n=1)
+mobius_batch_norm2d = functools.partial(mobius_batch_norm_nd, n=2)
 
 
 def mobius_linear(

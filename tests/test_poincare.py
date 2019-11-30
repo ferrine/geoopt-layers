@@ -109,6 +109,48 @@ def test_adaptive_avg_pool():
 @pytest.mark.parametrize("bias", [True, False], ids=["bias", "no-bias"])
 def test_batch_norm(bias):
     ball = geoopt.PoincareBall()
+    point = ball.random(2, 5)
+    layer = geoopt_layers.poincare.MobiusBatchNorm(5, ball=ball, bias=bias)
+    out = layer(point)
+    assert out.shape == (2, 5)
+
+    ball.assert_check_point_on_manifold(out)
+
+
+def test_batch_norm_multi():
+    ball = geoopt.PoincareBall()
+    point = ball.random(2, 3, 4, 5)
+    layer = geoopt_layers.poincare.MobiusBatchNorm((3, 4, 5), ball=ball)
+    out = layer(point)
+    assert out.shape == (2, 3, 4, 5)
+
+    ball.assert_check_point_on_manifold(out)
+
+
+@pytest.mark.parametrize("bias", [True, False], ids=["bias", "no-bias"])
+def test_batch_norm_1d(bias):
+    ball = geoopt.PoincareBall()
+    point = ball.random(2, 5, 5, 2).permute(0, 1, 3, 2)
+    layer = geoopt_layers.poincare.MobiusBatchNorm1d(2, ball=ball, bias=bias)
+    out = layer(point)
+    assert out.shape == (2, 5, 2, 5)
+
+    ball.assert_check_point_on_manifold(out.permute(0, 1, 3, 2))
+
+
+def test_batch_norm_1d_multi():
+    ball = geoopt.PoincareBall()
+    point = ball.random(2, 5, 3, 5, 2).permute(0, 1, 2, 4, 3)
+    layer = geoopt_layers.poincare.MobiusBatchNorm1d((3, 2), ball=ball)
+    out = layer(point)
+    assert out.shape == (2, 5, 3, 2, 5)
+
+    ball.assert_check_point_on_manifold(out.permute(0, 1, 2, 4, 3))
+
+
+@pytest.mark.parametrize("bias", [True, False], ids=["bias", "no-bias"])
+def test_batch_norm_2d(bias):
+    ball = geoopt.PoincareBall()
     point = ball.random(2, 5, 5, 2).permute(0, 3, 1, 2)
     layer = geoopt_layers.poincare.MobiusBatchNorm2d(2, ball=ball, bias=bias)
     out = layer(point)
@@ -117,7 +159,7 @@ def test_batch_norm(bias):
     ball.assert_check_point_on_manifold(out.permute(0, 2, 3, 1))
 
 
-def test_batch_norm_multi():
+def test_batch_norm_2d_multi():
     ball = geoopt.PoincareBall()
     point = ball.random(2, 3, 5, 5, 2).permute(0, 1, 4, 2, 3)
     layer = geoopt_layers.poincare.MobiusBatchNorm2d((3, 2), ball=ball)

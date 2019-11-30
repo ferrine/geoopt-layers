@@ -1,12 +1,19 @@
 from ..utils import ManifoldModule
-from .functional import mobius_batch_norm2d
+from .functional import mobius_batch_norm_nd
 import torch
 import geoopt
 
-__all__ = ["MobiusBatchNorm2d"]
+__all__ = [
+    "MobiusBatchNorm",
+    "MobiusBatchNorm1d",
+    "MobiusBatchNorm2d",
+    "MobiusBatchNorm3d",
+]
 
 
-class MobiusBatchNorm2d(ManifoldModule):
+class _MobiusBatchNormNd(ManifoldModule):
+    n: int
+
     def __init__(
         self,
         dimension,
@@ -21,12 +28,11 @@ class MobiusBatchNorm2d(ManifoldModule):
         super().__init__()
         self.ball = ball
         dimension = geoopt.utils.size2shape(dimension)
-        self.register_buffer("running_midpoint", torch.zeros(*dimension, 1, 1))
-        self.register_buffer("running_variance", torch.ones(dimension[:-1] + (1, 1, 1)))
+        self.register_buffer("running_midpoint", torch.zeros(dimension))
+        self.register_buffer("running_variance", torch.ones(dimension[:-1] + (1,)))
         if alpha:
             self.register_parameter(
-                "alpha",
-                geoopt.ManifoldParameter(torch.ones(dimension[:-1] + (1, 1, 1))),
+                "alpha", geoopt.ManifoldParameter(torch.ones(dimension[:-1] + (1,)))
             )
         else:
             self.register_parameter("alpha", None)
@@ -40,25 +46,19 @@ class MobiusBatchNorm2d(ManifoldModule):
         self.beta1 = beta1
         self.beta2 = beta2
 
-    @property
-    def bias_view(self):
-        if self.bias is not None:
-            return self.bias.view(self.bias.shape + (1, 1))
-        else:
-            return None
-
     def forward(self, input):
-        return mobius_batch_norm2d(
+        return mobius_batch_norm_nd(
             input=input,
             running_midpoint=self.running_midpoint,
             running_variance=self.running_variance,
             alpha=self.alpha,
-            bias=self.bias_view,
+            bias=self.bias,
             training=self.training,
             beta1=self.beta1,
             beta2=self.beta2,
             epsilon=self.epsilon,
             ball=self.ball,
+            n=self.n,
         )
 
     def extra_repr(self):
@@ -77,3 +77,19 @@ class MobiusBatchNorm2d(ManifoldModule):
             self.alpha.ones_()
         if self.bias is not None:
             self.bias.zero_()
+
+
+class MobiusBatchNorm(_MobiusBatchNormNd):
+    n = 0
+
+
+class MobiusBatchNorm1d(_MobiusBatchNormNd):
+    n = 1
+
+
+class MobiusBatchNorm2d(_MobiusBatchNormNd):
+    n = 2
+
+
+class MobiusBatchNorm3d(_MobiusBatchNormNd):
+    n = 3
