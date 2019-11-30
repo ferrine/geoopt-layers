@@ -128,11 +128,11 @@ class KNNIndex(PairwiseDistances):
         self.k = k
         self.return_distances = return_distances
 
-    @torch.no_grad()
     def forward(self, x, y=None):
-        distances = super().forward(x, y)
-        dim = idx2sign(self.dim, distances.dim()) + 1
-        distances, idx = distances.topk(k=self.k, dim=dim, largest=False)
+        with torch.set_grad_enabled(self.return_distances):
+            distances = super().forward(x, y)
+            dim = idx2sign(self.dim, distances.dim()) + 1
+            distances, idx = distances.topk(k=self.k, dim=dim, largest=False)
         if self.return_distances:
             return distances, idx
         else:

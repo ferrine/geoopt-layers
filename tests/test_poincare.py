@@ -1,5 +1,6 @@
 import geoopt
 import geoopt_layers
+import itertools
 import torch
 import pytest
 
@@ -106,63 +107,72 @@ def test_adaptive_avg_pool():
     ball.assert_check_point_on_manifold(out.permute(0, 2, 3, 1))
 
 
-@pytest.mark.parametrize("bias", [True, False], ids=["bias", "no-bias"])
-def test_batch_norm(bias):
+@pytest.mark.parametrize("bias,train", itertools.product([True, False], [True, False]))
+def test_batch_norm(bias, train):
     ball = geoopt.PoincareBall()
     point = ball.random(2, 5)
     layer = geoopt_layers.poincare.MobiusBatchNorm(5, ball=ball, bias=bias)
+    layer.train(train)
     out = layer(point)
     assert out.shape == (2, 5)
 
     ball.assert_check_point_on_manifold(out)
 
 
-def test_batch_norm_multi():
+@pytest.mark.parametrize("bias,train", itertools.product([True, False], [True, False]))
+def test_batch_norm_multi(bias, train):
     ball = geoopt.PoincareBall()
     point = ball.random(2, 3, 4, 5)
-    layer = geoopt_layers.poincare.MobiusBatchNorm((3, 4, 5), ball=ball)
+    layer = geoopt_layers.poincare.MobiusBatchNorm((3, 4, 5), ball=ball, bias=bias)
+    layer.train(train)
     out = layer(point)
     assert out.shape == (2, 3, 4, 5)
 
     ball.assert_check_point_on_manifold(out)
 
 
-@pytest.mark.parametrize("bias", [True, False], ids=["bias", "no-bias"])
-def test_batch_norm_1d(bias):
+@pytest.mark.parametrize("bias,train", itertools.product([True, False], [True, False]))
+def test_batch_norm_1d(bias, train):
     ball = geoopt.PoincareBall()
     point = ball.random(2, 5, 5, 2).permute(0, 1, 3, 2)
     layer = geoopt_layers.poincare.MobiusBatchNorm1d(2, ball=ball, bias=bias)
+    layer.train(train)
     out = layer(point)
     assert out.shape == (2, 5, 2, 5)
 
     ball.assert_check_point_on_manifold(out.permute(0, 1, 3, 2))
 
 
-def test_batch_norm_1d_multi():
+@pytest.mark.parametrize("bias,train", itertools.product([True, False], [True, False]))
+def test_batch_norm_1d_multi(bias, train):
     ball = geoopt.PoincareBall()
     point = ball.random(2, 5, 3, 5, 2).permute(0, 1, 2, 4, 3)
-    layer = geoopt_layers.poincare.MobiusBatchNorm1d((3, 2), ball=ball)
+    layer = geoopt_layers.poincare.MobiusBatchNorm1d((3, 2), ball=ball, bias=bias)
+    layer.train(train)
     out = layer(point)
     assert out.shape == (2, 5, 3, 2, 5)
 
     ball.assert_check_point_on_manifold(out.permute(0, 1, 2, 4, 3))
 
 
-@pytest.mark.parametrize("bias", [True, False], ids=["bias", "no-bias"])
-def test_batch_norm_2d(bias):
+@pytest.mark.parametrize("bias,train", itertools.product([True, False], [True, False]))
+def test_batch_norm_2d(bias, train):
     ball = geoopt.PoincareBall()
     point = ball.random(2, 5, 5, 2).permute(0, 3, 1, 2)
     layer = geoopt_layers.poincare.MobiusBatchNorm2d(2, ball=ball, bias=bias)
+    layer.train(train)
     out = layer(point)
     assert out.shape == (2, 2, 5, 5)
 
     ball.assert_check_point_on_manifold(out.permute(0, 2, 3, 1))
 
 
-def test_batch_norm_2d_multi():
+@pytest.mark.parametrize("bias,train", itertools.product([True, False], [True, False]))
+def test_batch_norm_2d_multi(bias, train):
     ball = geoopt.PoincareBall()
     point = ball.random(2, 3, 5, 5, 2).permute(0, 1, 4, 2, 3)
-    layer = geoopt_layers.poincare.MobiusBatchNorm2d((3, 2), ball=ball)
+    layer = geoopt_layers.poincare.MobiusBatchNorm2d((3, 2), ball=ball, bias=bias)
+    layer.train(train)
     out = layer(point)
     assert out.shape == (2, 3, 2, 5, 5)
 
