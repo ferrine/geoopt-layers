@@ -1,5 +1,5 @@
-from geoopt_layers.utils import idx2sign
-from ..utils import prod
+from geoopt_layers.utils import idx2sign, prod
+from geoopt.utils import size2shape
 
 __all__ = ["poincare_mean", "poincare_lincomb", "apply_radial"]
 
@@ -19,9 +19,8 @@ def _reduce_dim(maxdim, reducedim, dim):
     if reducedim is None:
         reducedim = list(range(maxdim))
         del reducedim[dim]
-    elif not isinstance(reducedim, (list, tuple)):
-        reducedim = (reducedim,)
-    reducedim = tuple(reducedim)
+    else:
+        reducedim = size2shape(reducedim)
     return reducedim
 
 
