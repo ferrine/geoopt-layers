@@ -1,12 +1,11 @@
 import geoopt
 import torch.nn.functional
-import torch.jit
 import functools
 from geoopt_layers.poincare import math
 
 
 def mobius_adaptive_max_pool2d(input, output_size, return_indices=False):
-    norms = input.norm(dim=1, keepdim=True)
+    norms = input.norm(dim=1, keepdim=True, p=2)
     _, idx = torch.nn.functional.adaptive_max_pool2d(
         norms, output_size, return_indices=True
     )
