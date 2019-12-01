@@ -56,8 +56,8 @@ def poincare_mean(xs, weights=None, *, ball, reducedim=None, dim=-1, keepdim=Fal
         weights = weights.unsqueeze(dim)
     two_mean = (
         gamma * weights * xs / ((gamma - 1) * weights).sum(reducedim, keepdim=True)
-    )
-    mean = ball.mobius_scalar_mul(0.5, two_mean.sum(reducedim, keepdim=True))
+    ).sum(reducedim, keepdim=True)
+    mean = ball.mobius_scalar_mul(0.5, two_mean)
     if not keepdim:
         mean = _drop_dims(mean, reducedim)
     return mean
