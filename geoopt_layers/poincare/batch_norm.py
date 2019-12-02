@@ -11,8 +11,8 @@ __all__ = [
 ]
 
 
-class _MobiusBatchNormNd(ManifoldModule):
-    n: int
+class MobiusBatchNorm(ManifoldModule):
+    n = 0
 
     def __init__(
         self,
@@ -79,17 +79,13 @@ class _MobiusBatchNormNd(ManifoldModule):
             self.bias.zero_()
 
 
-class MobiusBatchNorm(_MobiusBatchNormNd):
-    n = 0
-
-
-class MobiusBatchNorm1d(_MobiusBatchNormNd):
+class MobiusBatchNorm1d(MobiusBatchNorm):
     n = 1
 
 
-class MobiusBatchNorm2d(_MobiusBatchNormNd):
+class MobiusBatchNorm2d(MobiusBatchNorm):
     n = 2
 
 
-class MobiusBatchNorm3d(_MobiusBatchNormNd):
+class MobiusBatchNorm3d(MobiusBatchNorm):
     n = 3

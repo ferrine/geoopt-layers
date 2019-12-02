@@ -334,3 +334,83 @@ def test_weighted_centroids_2d_multi(method, train, zero):
     assert out.shape == (2, 3, 2, 5, 5)
 
     ball.assert_check_point_on_manifold(out.permute(0, 1, 3, 4, 2))
+
+
+@pytest.mark.parametrize(
+    "squared,train,zero,signed",
+    itertools.product([True, False], [True, False], [True, False], [True, False]),
+)
+def test_dist_planes_2d(squared, train, zero, signed):
+    ball = geoopt.PoincareBall()
+    point = ball.random(2, 5, 5, 2).permute(0, 3, 1, 2)
+    layer = geoopt_layers.poincare.Distance2PoincareHyperplanes2d(
+        plane_shape=2,
+        num_planes=10,
+        ball=ball,
+        squared=squared,
+        zero=zero,
+        signed=signed,
+    ).train(train)
+    out = layer(point)
+    assert not torch.isnan(out).any()
+    assert out.shape == (2, 10, 5, 5)
+
+
+@pytest.mark.parametrize(
+    "squared,train,zero,signed",
+    itertools.product([True, False], [True, False], [True, False], [True, False]),
+)
+def test_dist_planes(squared, train, zero, signed):
+    ball = geoopt.PoincareBall()
+    point = ball.random(2, 5, 5, 2)
+    layer = geoopt_layers.poincare.Distance2PoincareHyperplanes(
+        plane_shape=2,
+        num_planes=10,
+        ball=ball,
+        squared=squared,
+        zero=zero,
+        signed=signed,
+    ).train(train)
+    out = layer(point)
+    assert not torch.isnan(out).any()
+    assert out.shape == (2, 5, 5, 10)
+
+
+@pytest.mark.parametrize(
+    "squared,train,zero,signed",
+    itertools.product([True, False], [True, False], [True, False], [True, False]),
+)
+def test_dist_planes_1d_multi(squared, train, zero, signed):
+    ball = geoopt.PoincareBall()
+    point = ball.random(2, 3, 5, 5, 2).permute(0, 1, 2, 4, 3)
+    layer = geoopt_layers.poincare.Distance2PoincareHyperplanes1d(
+        plane_shape=2,
+        num_planes=10,
+        ball=ball,
+        squared=squared,
+        zero=zero,
+        signed=signed,
+    ).train(train)
+    out = layer(point)
+    assert not torch.isnan(out).any()
+    assert out.shape == (2, 3, 5, 10, 5)
+
+
+@pytest.mark.parametrize(
+    "squared,train,zero,signed",
+    itertools.product([True, False], [True, False], [True, False], [True, False]),
+)
+def test_dist_planes_2d_multi(squared, train, zero, signed):
+    ball = geoopt.PoincareBall()
+    point = ball.random(2, 3, 5, 5, 2).permute(0, 1, 4, 2, 3)
+    layer = geoopt_layers.poincare.Distance2PoincareHyperplanes2d(
+        plane_shape=2,
+        num_planes=10,
+        ball=ball,
+        squared=squared,
+        zero=zero,
+        signed=signed,
+    ).train(train)
+    out = layer(point)
+    assert not torch.isnan(out).any()
+    assert out.shape == (2, 3, 10, 5, 5)

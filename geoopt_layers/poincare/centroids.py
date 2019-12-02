@@ -9,9 +9,11 @@ __all__ = [
     "Distance2PoincareCentroids",
     "Distance2PoincareCentroids1d",
     "Distance2PoincareCentroids2d",
+    "Distance2PoincareCentroids3d",
     "WeightedPoincareCentroids",
     "WeightedPoincareCentroids1d",
     "WeightedPoincareCentroids2d",
+    "WeightedPoincareCentroids3d",
 ]
 
 
@@ -21,6 +23,8 @@ def keep_zero(mod, input):
 
 
 class Distance2PoincareCentroids(distance.Distance2Centroids):
+    n = 0
+
     def __init__(
         self,
         centroid_shape: int,
@@ -56,32 +60,32 @@ class Distance2PoincareCentroids(distance.Distance2Centroids):
         text += ", zero={}".format(self.zero)
         return text
 
+    def forward(self, input):
+        input = input.unsqueeze(-self.n - 1)
+        centroids = self.centroids.permute(1, 0)
+        centroids = centroids.view(centroids.shape + (1,) * self.n)
+        if self.squared:
+            dist = self.manifold.dist2(input, centroids, dim=-self.n - 2)
+        else:
+            dist = self.manifold.dist(input, centroids, dim=-self.n - 2)
+        return dist
+
 
 class Distance2PoincareCentroids1d(Distance2PoincareCentroids):
-    def forward(self, input):
-        input = input.unsqueeze(-2)
-        centroids = self.centroids.permute(1, 0)
-        centroids = centroids.view(centroids.shape + (1,))
-        if self.squared:
-            dist = self.manifold.dist2(input, centroids, dim=-3)
-        else:
-            dist = self.manifold.dist(input, centroids, dim=-3)
-        return dist
+    n = 1
 
 
 class Distance2PoincareCentroids2d(Distance2PoincareCentroids):
-    def forward(self, input):
-        input = input.unsqueeze(-3)
-        centroids = self.centroids.permute(1, 0)
-        centroids = centroids.view(centroids.shape + (1, 1))
-        if self.squared:
-            dist = self.manifold.dist2(input, centroids, dim=-4)
-        else:
-            dist = self.manifold.dist(input, centroids, dim=-4)
-        return dist
+    n = 2
+
+
+class Distance2PoincareCentroids3d(Distance2PoincareCentroids):
+    n = 3
 
 
 class WeightedPoincareCentroids(ManifoldModule):
+    n = 0
+
     def __init__(
         self,
         centroid_shape: int,
@@ -134,24 +138,22 @@ class WeightedPoincareCentroids(ManifoldModule):
         )
         self.centroids[0] = 0.0
         if self.origin is not None:
-            self.origin.set_(
-                self.manifold.origin(
-                    self.origin.shape,
-                    dtype=self.centroids.dtype,
-                    device=self.centroids.device,
-                )
-            )
+            self.origin.zero_()
 
     def forward(self, weights):
+        if self.origin is not None:
+            origin = self.origin.view(self.origin.shape + (1,) * self.n)
+        else:
+            origin = None
         return poincare_lincomb(
-            self.centroids,
+            self.centroids.view(self.centroids.shape + (1,) * self.n),
             weights=weights,
-            reducedim=-2,
-            dim=-1,
+            reducedim=-self.n - 2,
+            dim=-self.n - 1,
             ball=self.manifold,
             keepdim=False,
             method=self.method,
-            origin=self.origin,
+            origin=origin,
         )
 
     def extra_repr(self) -> str:
@@ -167,36 +169,12 @@ class WeightedPoincareCentroids(ManifoldModule):
 
 
 class WeightedPoincareCentroids1d(WeightedPoincareCentroids):
-    def forward(self, weights):
-        if self.origin is not None:
-            origin = self.origin.view(*self.origin.shape, 1)
-        else:
-            origin = None
-        return poincare_lincomb(
-            self.centroids.view(*self.centroids.shape, 1),
-            weights=weights,
-            reducedim=-3,
-            dim=-2,
-            ball=self.manifold,
-            keepdim=False,
-            method=self.method,
-            origin=origin,
-        )
+    n = 1
 
 
 class WeightedPoincareCentroids2d(WeightedPoincareCentroids):
-    def forward(self, weights):
-        if self.origin is not None:
-            origin = self.origin.view(*self.origin.shape, 1, 1)
-        else:
-            origin = None
-        return poincare_lincomb(
-            self.centroids.view(*self.centroids.shape, 1, 1),
-            weights=weights,
-            reducedim=-4,
-            dim=-3,
-            ball=self.manifold,
-            keepdim=False,
-            method=self.method,
-            origin=origin,
-        )
+    n = 2
+
+
+class WeightedPoincareCentroids3d(WeightedPoincareCentroids):
+    n = 3
