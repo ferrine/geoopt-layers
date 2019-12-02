@@ -187,86 +187,149 @@ def test_radial():
     ball.assert_check_point_on_manifold(out.permute(0, 2, 3, 1))
 
 
-@pytest.mark.parametrize("squared", [True, False], ids=["squared", "not-squared"])
-def test_dist_centroids_2d(squared):
+@pytest.mark.parametrize(
+    "squared,train,zero", itertools.product([True, False], [True, False], [True, False])
+)
+def test_dist_centroids_2d(squared, train, zero):
     ball = geoopt.PoincareBall()
     point = ball.random(2, 5, 5, 2).permute(0, 3, 1, 2)
     layer = geoopt_layers.poincare.Distance2PoincareCentroids2d(
-        centroid_shape=2, num_centroids=10, ball=ball, squared=squared
-    )
+        centroid_shape=2, num_centroids=10, ball=ball, squared=squared, zero=zero
+    ).train(train)
     out = layer(point)
     assert not torch.isnan(out).any()
     assert out.shape == (2, 10, 5, 5)
 
 
-@pytest.mark.parametrize("squared", [True, False], ids=["squared", "not-squared"])
-def test_dist_centroids(squared):
+@pytest.mark.parametrize(
+    "squared,train,zero", itertools.product([True, False], [True, False], [True, False])
+)
+def test_dist_centroids(squared, train, zero):
     ball = geoopt.PoincareBall()
     point = ball.random(2, 5, 5, 2)
     layer = geoopt_layers.poincare.Distance2PoincareCentroids(
-        centroid_shape=2, num_centroids=10, ball=ball, squared=squared
-    )
+        centroid_shape=2, num_centroids=10, ball=ball, squared=squared, zero=zero
+    ).train(train)
     out = layer(point)
     assert not torch.isnan(out).any()
     assert out.shape == (2, 5, 5, 10)
 
 
-@pytest.mark.parametrize("squared", [True, False], ids=["squared", "not-squared"])
-def test_dist_centroids_2d_multi(squared):
+@pytest.mark.parametrize(
+    "squared,train,zero", itertools.product([True, False], [True, False], [True, False])
+)
+def test_dist_centroids_1d_multi(squared, train, zero):
+    ball = geoopt.PoincareBall()
+    point = ball.random(2, 3, 5, 5, 2).permute(0, 1, 2, 4, 3)
+    layer = geoopt_layers.poincare.Distance2PoincareCentroids1d(
+        centroid_shape=2, num_centroids=10, ball=ball, squared=squared, zero=zero
+    ).train(train)
+    out = layer(point)
+    assert not torch.isnan(out).any()
+    assert out.shape == (2, 3, 5, 10, 5)
+
+
+@pytest.mark.parametrize(
+    "squared,train,zero", itertools.product([True, False], [True, False], [True, False])
+)
+def test_dist_centroids_2d_multi(squared, train, zero):
     ball = geoopt.PoincareBall()
     point = ball.random(2, 3, 5, 5, 2).permute(0, 1, 4, 2, 3)
     layer = geoopt_layers.poincare.Distance2PoincareCentroids2d(
-        centroid_shape=2, num_centroids=10, ball=ball, squared=squared
-    )
+        centroid_shape=2, num_centroids=10, ball=ball, squared=squared, zero=zero
+    ).train(train)
     out = layer(point)
     assert not torch.isnan(out).any()
     assert out.shape == (2, 3, 10, 5, 5)
 
 
-@pytest.mark.parametrize("method", ["einstein", "tangent"])
-def test_weighted_centroids(method):
+@pytest.mark.parametrize(
+    "method,train,zero",
+    itertools.product(["einstein", "tangent"], [True, False], [True, False]),
+)
+def test_weighted_centroids(method, train, zero):
     ball = geoopt.PoincareBall()
     weights = torch.randn(2, 5, 17)
     layer = geoopt_layers.poincare.WeightedPoincareCentroids(
-        7, 17, method=method, ball=ball
-    )
+        7, 17, method=method, ball=ball, zero=zero
+    ).train(train)
     out = layer(weights)
     assert out.shape == (2, 5, 7)
     ball.assert_check_point_on_manifold(out)
 
 
-@pytest.mark.parametrize("method", ["tangent"])
-def test_weighted_centroids_zeros(method):
+@pytest.mark.parametrize(
+    "method,train,zero", itertools.product(["tangent"], [True, False], [True, False])
+)
+def test_weighted_centroids_zeros(method, train, zero):
     ball = geoopt.PoincareBall()
     weights = torch.zeros(2, 5, 17)
     layer = geoopt_layers.poincare.WeightedPoincareCentroids(
-        7, 17, method=method, ball=ball
-    )
+        7, 17, method=method, ball=ball, zero=zero
+    ).train(train)
     out = layer(weights)
     assert out.shape == (2, 5, 7)
     ball.assert_check_point_on_manifold(out)
 
 
-@pytest.mark.parametrize("method", ["einstein", "tangent"])
-def test_weighted_centroids_2d(method):
+@pytest.mark.parametrize(
+    "method,train,zero",
+    itertools.product(["einstein", "tangent"], [True, False], [True, False]),
+)
+def test_weighted_centroids_1d(method, train, zero):
+    ball = geoopt.PoincareBall()
+    point = ball.random(2, 5, 5, 7).permute(0, 1, 3, 2)
+    layer = geoopt_layers.poincare.WeightedPoincareCentroids1d(
+        2, 7, method=method, ball=ball, zero=zero
+    ).train(train)
+    out = layer(point)
+    assert out.shape == (2, 5, 2, 5)
+
+    ball.assert_check_point_on_manifold(out.permute(0, 1, 3, 2))
+
+
+@pytest.mark.parametrize(
+    "method,train,zero",
+    itertools.product(["einstein", "tangent"], [True, False], [True, False]),
+)
+def test_weighted_centroids_1d_multi(method, train, zero):
+    ball = geoopt.PoincareBall()
+    point = ball.random(2, 3, 5, 5, 7).permute(0, 1, 2, 4, 3)
+    layer = geoopt_layers.poincare.WeightedPoincareCentroids1d(
+        2, 7, method=method, ball=ball, zero=zero
+    ).train(train)
+    out = layer(point)
+    assert out.shape == (2, 3, 5, 2, 5)
+
+    ball.assert_check_point_on_manifold(out.permute(0, 1, 2, 4, 3))
+
+
+@pytest.mark.parametrize(
+    "method,train,zero",
+    itertools.product(["einstein", "tangent"], [True, False], [True, False]),
+)
+def test_weighted_centroids_2d(method, train, zero):
     ball = geoopt.PoincareBall()
     point = ball.random(2, 5, 5, 7).permute(0, 3, 1, 2)
     layer = geoopt_layers.poincare.WeightedPoincareCentroids2d(
-        2, 7, method=method, ball=ball
-    )
+        2, 7, method=method, ball=ball, zero=zero
+    ).train(train)
     out = layer(point)
     assert out.shape == (2, 2, 5, 5)
 
     ball.assert_check_point_on_manifold(out.permute(0, 2, 3, 1))
 
 
-@pytest.mark.parametrize("method", ["einstein", "tangent"])
-def test_weighted_centroids_2d_multi(method):
+@pytest.mark.parametrize(
+    "method,train,zero",
+    itertools.product(["einstein", "tangent"], [True, False], [True, False]),
+)
+def test_weighted_centroids_2d_multi(method, train, zero):
     ball = geoopt.PoincareBall()
     point = ball.random(2, 3, 5, 5, 7).permute(0, 1, 4, 2, 3)
     layer = geoopt_layers.poincare.WeightedPoincareCentroids2d(
-        2, 7, method=method, ball=ball
-    )
+        2, 7, method=method, ball=ball, zero=zero
+    ).train(train)
     out = layer(point)
     assert out.shape == (2, 3, 2, 5, 5)
 

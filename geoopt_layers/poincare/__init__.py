@@ -14,7 +14,9 @@ from .batch_norm import (
 from .radial import RadialNd, Radial2d, Radial
 from .centroids import (
     Distance2PoincareCentroids,
+    Distance2PoincareCentroids1d,
     Distance2PoincareCentroids2d,
     WeightedPoincareCentroids,
+    WeightedPoincareCentroids1d,
     WeightedPoincareCentroids2d,
 )

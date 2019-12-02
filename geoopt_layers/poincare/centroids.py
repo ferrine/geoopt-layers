@@ -5,9 +5,31 @@ from .math import poincare_lincomb
 import torch
 
 
+__all__ = [
+    "Distance2PoincareCentroids",
+    "Distance2PoincareCentroids1d",
+    "Distance2PoincareCentroids2d",
+    "WeightedPoincareCentroids",
+    "WeightedPoincareCentroids1d",
+    "WeightedPoincareCentroids2d",
+]
+
+
+def keep_zero(mod, input):
+    if mod.training:
+        mod.centroids[0] = 0.0
+
+
 class Distance2PoincareCentroids(distance.Distance2Centroids):
     def __init__(
-        self, centroid_shape: int, num_centroids: int, squared=False, *, ball, std=1.0
+        self,
+        centroid_shape: int,
+        num_centroids: int,
+        squared=False,
+        *,
+        ball,
+        std=1.0,
+        zero=False,
     ):
         self.std = std
         super().__init__(
@@ -16,6 +38,9 @@ class Distance2PoincareCentroids(distance.Distance2Centroids):
             num_centroids=num_centroids,
             squared=squared,
         )
+        self.zero = zero
+        if zero:
+            self.register_forward_pre_hook(keep_zero)
 
     @torch.no_grad()
     def reset_parameters(self):
@@ -25,6 +50,23 @@ class Distance2PoincareCentroids(distance.Distance2Centroids):
             )
         )
         self.centroids[0] = 0.0
+
+    def extra_repr(self) -> str:
+        text = super().extra_repr()
+        text += ", zero={}".format(self.zero)
+        return text
+
+
+class Distance2PoincareCentroids1d(Distance2PoincareCentroids):
+    def forward(self, input):
+        input = input.unsqueeze(-2)
+        centroids = self.centroids.permute(1, 0)
+        centroids = centroids.view(centroids.shape + (1,))
+        if self.squared:
+            dist = self.manifold.dist2(input, centroids, dim=-3)
+        else:
+            dist = self.manifold.dist(input, centroids, dim=-3)
+        return dist
 
 
 class Distance2PoincareCentroids2d(Distance2PoincareCentroids):
@@ -48,7 +90,8 @@ class WeightedPoincareCentroids(ManifoldModule):
         *,
         ball,
         learn_origin=True,
-        std=1.0
+        std=1.0,
+        zero=False,
     ):
         super().__init__()
 
@@ -74,6 +117,9 @@ class WeightedPoincareCentroids(ManifoldModule):
             parameter=learn_origin,
         )
         self.learn_origin = learn_origin and method == "tangent"
+        self.zero = zero
+        if zero:
+            self.register_forward_pre_hook(keep_zero)
         self.reset_parameters()
 
     @torch.no_grad()
@@ -114,7 +160,27 @@ class WeightedPoincareCentroids(ManifoldModule):
             "centroid_shape={centroid_shape}, "
             "num_centroids={num_centroids}, "
             "method={method}, "
-            "learn_origin={learn_origin}".format(**self.__dict__, self=self)
+            "learn_origin={learn_origin}, zero={zero}".format(
+                **self.__dict__, self=self
+            )
+        )
+
+
+class WeightedPoincareCentroids1d(WeightedPoincareCentroids):
+    def forward(self, weights):
+        if self.origin is not None:
+            origin = self.origin.view(*self.origin.shape, 1)
+        else:
+            origin = None
+        return poincare_lincomb(
+            self.centroids.view(*self.centroids.shape, 1),
+            weights=weights,
+            reducedim=-3,
+            dim=-2,
+            ball=self.manifold,
+            keepdim=False,
+            method=self.method,
+            origin=origin,
         )
 
 
