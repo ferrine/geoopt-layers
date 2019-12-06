@@ -20,8 +20,6 @@ from .centroids import (
     WeightedPoincareCentroids1d,
     WeightedPoincareCentroids2d,
 )
-
-
 from .hyperplanes import (
     Distance2PoincareHyperplanes,
     Distance2PoincareHyperplanes1d,
