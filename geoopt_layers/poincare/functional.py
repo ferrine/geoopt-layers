@@ -173,3 +173,53 @@ def mobius_linear(
             if bias is not None:
                 output = ball_out.mobius_add(output, bias)
     return output
+
+
+def mobius_conv2d(
+    input,
+    weight_mm,
+    weight_avg,
+    stride=1,
+    padding=0,
+    dilation=1,
+    points_in=1,
+    points_out=1,
+    *,
+    ball,
+    ball_out=None,
+):
+    assert weight_mm.shape[-2:] == (1, 1)
+    assert weight_avg.shape[:2] == (points_out, points_in)
+    if ball_out is None:
+        ball_out = ball
+    shape = input.shape
+    input = input.view(input.shape[0], -1, points_in, *input.shape[-2:])
+    input = ball.logmap0(input, dim=1).view(shape)
+    input = torch.nn.functional.conv2d(input, weight_mm)
+    input = input.view(input.shape[0], -1, points_in, *input.shape[-2:])
+    out_dim = input.shape[1]
+    input = ball_out.expmap0(input, dim=1)
+    gamma = ball_out.lambda_x(input, dim=1, keepdim=True)
+    gamma = gamma.view(input.shape[0], 1, points_in, *input.shape[-2:])
+    nominator = (input * gamma).view(shape)
+    denominator = (gamma - 1).view(input.shape[0], points_in, *input.shape[-2:])
+    # [B, (p1_0, p2_0, p3_0, p4_0, ..., p1_D, p2_0, p3_D, p4_D), H, W)
+    weight_avg_d = weight_avg.repeat_interleave(out_dim, dim=0)
+    output_nominator = torch.nn.functional.conv2d(
+        nominator,
+        weight_avg_d,
+        groups=points_in,
+        stride=stride,
+        padding=padding,
+        dilation=dilation,
+    )
+    output_denominator = torch.nn.functional.conv2d(
+        denominator,
+        weight_avg,
+        groups=points_in,
+        stride=stride,
+        padding=padding,
+        dilation=dilation,
+    )
+    output_denominator = output_denominator.repeat_interleave(out_dim, dim=1)
+    return output_nominator / output_denominator

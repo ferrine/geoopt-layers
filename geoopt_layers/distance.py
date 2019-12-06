@@ -1,6 +1,7 @@
 from typing import Tuple, Union
 import geoopt.utils
-from .utils import ManifoldModule, idx2sign, prod
+from .utils import idx2sign, prod
+from geoopt_layers.base import ManifoldModule
 from .functional import pairwise_distances
 import torch
 

@@ -1,6 +1,6 @@
 import torch.nn
 import geoopt
-from .utils import ManifoldModule
+from geoopt_layers.base import ManifoldModule
 from geoopt_layers.shape import Permuted
 
 __all__ = [

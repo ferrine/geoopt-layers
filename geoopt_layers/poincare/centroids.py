@@ -1,5 +1,5 @@
 import geoopt
-from ..utils import ManifoldModule
+from geoopt_layers.base import ManifoldModule
 from .. import distance
 from .math import poincare_lincomb
 import torch

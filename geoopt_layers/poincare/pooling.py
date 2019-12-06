@@ -1,5 +1,5 @@
 import torch.nn.functional
-from ..utils import ManifoldModule
+from geoopt_layers.base import ManifoldModule
 from geoopt_layers.poincare.functional import (
     mobius_adaptive_max_pool2d,
     mobius_max_pool2d,

@@ -1,4 +1,4 @@
-from ..utils import ManifoldModule
+from geoopt_layers.base import ManifoldModule
 from .functional import mobius_batch_norm_nd
 import torch
 import geoopt

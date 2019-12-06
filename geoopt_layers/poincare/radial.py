@@ -1,5 +1,5 @@
 from .math import apply_radial
-from ..utils import ManifoldModule
+from geoopt_layers.base import ManifoldModule
 
 __all__ = ["Radial", "Radial2d", "RadialNd"]
 

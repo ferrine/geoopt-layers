@@ -2,8 +2,7 @@ import torch.nn
 import geoopt
 
 from geoopt_layers.poincare.functional import mobius_linear
-from ..utils import ManifoldModule
-
+from geoopt_layers.base import ManifoldModule
 
 __all__ = ["MobiusLinear"]
 

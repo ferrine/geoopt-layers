@@ -1,4 +1,4 @@
-from ..utils import ManifoldModule
+from geoopt_layers.base import ManifoldModule
 import geoopt
 import torch
 
