@@ -4,6 +4,9 @@ from torch.nn.modules.utils import _pair
 from ..base import ManifoldModule
 
 
+__all__ = ["MobiusConv2d"]
+
+
 class MobiusConv2d(ManifoldModule):
     def __init__(
         self,
@@ -64,3 +67,8 @@ class MobiusConv2d(ManifoldModule):
             "points_in={points_in}, "
             "points_out={points_out}"
         ).format(**self.__dict__)
+
+    @torch.no_grad()
+    def init_parameters(self):
+        torch.nn.init.eye_(self.weight_mm)
+        self.weight_avg.fill_(1.)

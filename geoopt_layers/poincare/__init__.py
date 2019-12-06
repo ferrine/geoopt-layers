@@ -25,3 +25,5 @@ from .hyperplanes import (
     Distance2PoincareHyperplanes1d,
     Distance2PoincareHyperplanes2d,
 )
+from .conv import MobiusConv2d
+
