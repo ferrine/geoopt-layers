@@ -11,6 +11,10 @@ class MobiusConv2d(ManifoldModule):
     """
     Hyperbolic convolution.
 
+    Notes
+    -----
+    Shapes: Bx(D*P)xHxW, originally reshaped from BxDxPxxHxW
+
     Parameters
     ----------
     dim_in : int
