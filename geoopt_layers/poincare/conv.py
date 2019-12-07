@@ -72,6 +72,13 @@ class MobiusConv2d(ManifoldModule):
         self.weight_avg = torch.nn.Parameter(
             torch.empty(points_out, points_in, *self.kernel_size), requires_grad=True
         )
+        self.reset_parameters()
+
+    @torch.no_grad()
+    def reset_parameters(self):
+        torch.nn.init.eye_(self.weight_mm)
+        self.weight_mm.add_(torch.empty_like(self.weight_mm).normal_(0, 1e-3))
+        self.weight_avg.fill_(1)
 
     def forward(self, input):
         return mobius_conv2d(
