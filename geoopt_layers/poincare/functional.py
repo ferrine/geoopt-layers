@@ -213,13 +213,11 @@ def mobius_conv2d(
         dilation=dilation,
     )
     output_denominator = torch.nn.functional.conv2d(
-        denominator,
-        weight_avg,
-        groups=points_in,
-        stride=stride,
-        padding=padding,
-        dilation=dilation,
+        denominator, weight_avg, stride=stride, padding=padding, dilation=dilation
     )
     output_denominator = output_denominator.repeat_interleave(out_dim, dim=1)
     two_mean = output_nominator / output_denominator
-    return ball.mobius_scalar_mul(0.5, two_mean)
+    out_shape = two_mean.shape
+    two_mean = two_mean.view(two_mean.shape[0], -1, points_out, *two_mean.shape[-2:])
+    mean = ball.mobius_scalar_mul(0.5, two_mean, dim=1)
+    return mean.reshape(out_shape)

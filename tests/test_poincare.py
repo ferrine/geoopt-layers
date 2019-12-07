@@ -442,3 +442,36 @@ def test_weighted_average_equals_conv():
     )
     avg2 = conv(points).detach().view(-1)
     np.testing.assert_allclose(avg1, avg2, atol=1e-5)
+
+
+def test_two_points_average_equals_conv():
+    ball = geoopt.PoincareBall()
+    conv = geoopt_layers.poincare.MobiusConv2d(5, 5, 3, points_in=2, ball=ball)
+    with torch.no_grad():
+        torch.nn.init.eye_(conv.weight_mm)
+        conv.weight_avg.fill_(1)
+    points = ball.random(3, 3, 2, 5)
+    points_reshaped = (
+        points.transpose(-1, -2).reshape(3, 3, 10).permute(2, 0, 1).unsqueeze(0)
+    )
+    avg1 = geoopt_layers.poincare.math.poincare_mean(points, dim=-1, ball=ball)
+    avg2 = conv(points_reshaped).detach().view(-1)
+    np.testing.assert_allclose(avg1, avg2, atol=1e-5)
+
+
+def test_two_points_weighted_average_equals_conv():
+    ball = geoopt.PoincareBall()
+    conv = geoopt_layers.poincare.MobiusConv2d(5, 5, 3, points_in=2, ball=ball)
+    with torch.no_grad():
+        torch.nn.init.eye_(conv.weight_mm)
+        conv.weight_avg.normal_()
+        weight_avg = conv.weight_avg.detach().view(2, 3, 3).permute(1, 2, 0)
+    points = ball.random(3, 3, 2, 5)
+    points_reshaped = (
+        points.transpose(-1, -2).reshape(3, 3, 10).permute(2, 0, 1).unsqueeze(0)
+    )
+    avg1 = geoopt_layers.poincare.math.poincare_mean(
+        points, weight_avg, dim=-1, ball=ball
+    )
+    avg2 = conv(points_reshaped).detach().view(-1)
+    np.testing.assert_allclose(avg1, avg2, atol=1e-5)
