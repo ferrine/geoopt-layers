@@ -199,7 +199,6 @@ def mobius_conv2d(
     out_dim = input.shape[1]
     input = ball_out.expmap0(input, dim=1)
     gamma = ball_out.lambda_x(input, dim=1, keepdim=True)
-    gamma = gamma.view(input.shape[0], 1, points_in, *input.shape[-2:])
     nominator = (input * gamma).view(shape)
     denominator = (gamma - 1).view(input.shape[0], points_in, *input.shape[-2:])
     # [B, (p1_0, p2_0, p3_0, p4_0, ..., p1_D, p2_0, p3_D, p4_D), H, W)

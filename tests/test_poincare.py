@@ -423,9 +423,9 @@ def test_average_equals_conv():
     with torch.no_grad():
         torch.nn.init.eye_(conv.weight_mm)
         conv.weight_avg.fill_(1)
-    points = ball.random(1, 3, 3, 5).permute(0, 3, 1, 2)
-    avg1 = geoopt_layers.poincare.math.poincare_mean(points, dim=1, ball=ball)
-    avg2 = conv(points).detach().view(-1)
+    points = ball.random(1, 3, 3, 5)
+    avg1 = geoopt_layers.poincare.math.poincare_mean(points, dim=-1, ball=ball)
+    avg2 = conv(points.permute(0, 3, 1, 2)).detach().view(-1)
     np.testing.assert_allclose(avg1, avg2, atol=1e-5)
 
 
@@ -436,11 +436,11 @@ def test_weighted_average_equals_conv():
         torch.nn.init.eye_(conv.weight_mm)
         conv.weight_avg.normal_()
         weight_avg = conv.weight_avg.detach().view(1, 3, 3)
-    points = ball.random(1, 3, 3, 5).permute(0, 3, 1, 2)
+    points = ball.random(1, 3, 3, 5)
     avg1 = geoopt_layers.poincare.math.poincare_mean(
-        points, weight_avg, dim=-3, ball=ball
+        points, weight_avg, dim=-1, ball=ball
     )
-    avg2 = conv(points).detach().view(-1)
+    avg2 = conv(points.permute(0, 3, 1, 2)).detach().view(-1)
     np.testing.assert_allclose(avg1, avg2, atol=1e-5)
 
 
