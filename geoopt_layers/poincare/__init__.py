@@ -26,4 +26,4 @@ from .hyperplanes import (
     Distance2PoincareHyperplanes2d,
 )
 from .conv import MobiusConv2d
-
+from . import math

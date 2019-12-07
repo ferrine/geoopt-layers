@@ -3,6 +3,7 @@ import geoopt_layers
 import itertools
 import torch
 import pytest
+import numpy as np
 
 
 @pytest.fixture(autouse=True, params=[42, 41])
@@ -414,3 +415,30 @@ def test_dist_planes_2d_multi(squared, train, zero, signed):
     out = layer(point)
     assert not torch.isnan(out).any()
     assert out.shape == (2, 3, 10, 5, 5)
+
+
+def test_average_equals_conv():
+    ball = geoopt.PoincareBall()
+    conv = geoopt_layers.poincare.MobiusConv2d(5, 5, 3, ball=ball)
+    with torch.no_grad():
+        torch.nn.init.eye_(conv.weight_mm)
+        conv.weight_avg.fill_(1)
+    points = ball.random(1, 3, 3, 5).permute(0, 3, 1, 2)
+    avg1 = geoopt_layers.poincare.math.poincare_mean(points, dim=1, ball=ball)
+    avg2 = conv(points).detach().view(-1)
+    np.testing.assert_allclose(avg1, avg2, atol=1e-5)
+
+
+def test_weighted_average_equals_conv():
+    ball = geoopt.PoincareBall()
+    conv = geoopt_layers.poincare.MobiusConv2d(5, 5, 3, ball=ball)
+    with torch.no_grad():
+        torch.nn.init.eye_(conv.weight_mm)
+        conv.weight_avg.normal_()
+        weight_avg = conv.weight_avg.detach().view(1, 3, 3)
+    points = ball.random(1, 3, 3, 5).permute(0, 3, 1, 2)
+    avg1 = geoopt_layers.poincare.math.poincare_mean(
+        points, weight_avg, dim=-3, ball=ball
+    )
+    avg2 = conv(points).detach().view(-1)
+    np.testing.assert_allclose(avg1, avg2, atol=1e-5)

@@ -188,14 +188,13 @@ def mobius_conv2d(
     ball,
     ball_out=None,
 ):
-    assert weight_mm.shape[-2:] == (1, 1)
     assert weight_avg.shape[:2] == (points_out, points_in)
     if ball_out is None:
         ball_out = ball
     shape = input.shape
     input = input.view(input.shape[0], -1, points_in, *input.shape[-2:])
     input = ball.logmap0(input, dim=1).view(shape)
-    input = torch.nn.functional.conv2d(input, weight_mm)
+    input = torch.nn.functional.conv2d(input, weight_mm.view(*weight_mm.shape, 1, 1))
     input = input.view(input.shape[0], -1, points_in, *input.shape[-2:])
     out_dim = input.shape[1]
     input = ball_out.expmap0(input, dim=1)
@@ -208,7 +207,7 @@ def mobius_conv2d(
     output_nominator = torch.nn.functional.conv2d(
         nominator,
         weight_avg_d,
-        groups=points_in,
+        groups=out_dim,
         stride=stride,
         padding=padding,
         dilation=dilation,
@@ -222,4 +221,5 @@ def mobius_conv2d(
         dilation=dilation,
     )
     output_denominator = output_denominator.repeat_interleave(out_dim, dim=1)
-    return output_nominator / output_denominator
+    two_mean = output_nominator / output_denominator
+    return ball.mobius_scalar_mul(0.5, two_mean)

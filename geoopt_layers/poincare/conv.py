@@ -26,7 +26,7 @@ class MobiusConv2d(ManifoldModule):
         self.ball = ball
         if ball_out is None:
             ball_out = ball
-        self.out_ball = ball_out
+        self.ball_out = ball_out
         self.dim_in = dim_in
         self.dim_out = dim_out
         self.kernel_size = _pair(kernel_size)
@@ -50,7 +50,7 @@ class MobiusConv2d(ManifoldModule):
             stride=self.stride,
             padding=self.padding,
             dilation=self.dilation,
-            points_in=self.points,
+            points_in=self.points_in,
             points_out=self.points_out,
             ball=self.ball,
             ball_out=self.ball_out,
@@ -71,4 +71,4 @@ class MobiusConv2d(ManifoldModule):
     @torch.no_grad()
     def init_parameters(self):
         torch.nn.init.eye_(self.weight_mm)
-        self.weight_avg.fill_(1.)
+        self.weight_avg.fill_(1.0)
