@@ -8,6 +8,33 @@ __all__ = ["MobiusConv2d"]
 
 
 class MobiusConv2d(ManifoldModule):
+    """
+    Hyperbolic convolution.
+
+    Parameters
+    ----------
+    dim_in : int
+        dimension input of Poincare Ball
+    dim_out : int
+        dimension output of Poincare Ball
+    kernel_size : int|tuple
+        Convolutions kernel size
+    stride : int|tuple
+        Convolution stride
+    padding : int|tuple
+        Convolution padding (padded with zeros)
+    dilation : int|tuple
+        Convolution dilation
+    points_in : int
+        Number of points in input tensor (default 1)
+    points_out : int
+        Number of points in output tensor (default 1)
+    ball : geoopt.PoincareBall
+        input Poincare Ball manifold
+    ball_out : geoopt.PoincareBall
+        output Poincare Ball manifold (defaults to input Ball)
+    """
+
     def __init__(
         self,
         dim_in,
