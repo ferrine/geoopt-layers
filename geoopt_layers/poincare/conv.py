@@ -51,7 +51,8 @@ class MobiusConv2d(ManifoldModule):
         points_in=1,
         points_out=1,
         ball,
-        ball_out=None
+        ball_out=None,
+        matmul=True,
     ):
         super().__init__()
         self.ball = ball
@@ -66,9 +67,17 @@ class MobiusConv2d(ManifoldModule):
         self.dilation = _pair(dilation)
         self.points_in = points_in
         self.points_out = points_out
-        self.weight_mm = torch.nn.Parameter(
-            torch.empty(dim_out * points_in, dim_in * points_in), requires_grad=True
-        )
+        self.matmul = matmul
+        if self.matmul:
+            self.weight_mm = torch.nn.Parameter(
+                torch.empty(dim_out * points_in, dim_in * points_in), requires_grad=True
+            )
+        else:
+            self.register_parameter("weight_mm", None)
+            if ball is not ball_out:
+                raise ValueError(
+                    "If not performing matmul, output_ball should be same as input ball"
+                )
         self.weight_avg = torch.nn.Parameter(
             torch.empty(points_out, points_in, *self.kernel_size), requires_grad=True
         )
@@ -76,8 +85,9 @@ class MobiusConv2d(ManifoldModule):
 
     @torch.no_grad()
     def reset_parameters(self):
-        torch.nn.init.eye_(self.weight_mm)
-        self.weight_mm.add_(torch.empty_like(self.weight_mm).normal_(0, 1e-3))
+        if self.weight_mm is not None:
+            torch.nn.init.eye_(self.weight_mm)
+            self.weight_mm.add_(torch.empty_like(self.weight_mm).normal_(0, 1e-3))
         self.weight_avg.fill_(1)
 
     def forward(self, input):

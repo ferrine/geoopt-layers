@@ -417,11 +417,13 @@ def test_dist_planes_2d_multi(squared, train, zero, signed):
     assert out.shape == (2, 3, 10, 5, 5)
 
 
-def test_average_equals_conv():
+@pytest.mark.parametrize("mm", [True, False])
+def test_average_equals_conv(mm):
     ball = geoopt.PoincareBall()
-    conv = geoopt_layers.poincare.MobiusConv2d(5, 5, 3, ball=ball)
+    conv = geoopt_layers.poincare.MobiusConv2d(5, 5, 3, ball=ball, matmul=mm)
     with torch.no_grad():
-        torch.nn.init.eye_(conv.weight_mm)
+        if mm:
+            torch.nn.init.eye_(conv.weight_mm)
         conv.weight_avg.fill_(1)
     points = ball.random(1, 1, 3, 3, 5)
     avg1 = geoopt_layers.poincare.math.poincare_mean(points, dim=-1, ball=ball)
@@ -430,11 +432,13 @@ def test_average_equals_conv():
     ball.assert_check_point_on_manifold(avg2)
 
 
-def test_weighted_average_equals_conv():
+@pytest.mark.parametrize("mm", [True, False])
+def test_weighted_average_equals_conv(mm):
     ball = geoopt.PoincareBall()
-    conv = geoopt_layers.poincare.MobiusConv2d(5, 5, 3, ball=ball)
+    conv = geoopt_layers.poincare.MobiusConv2d(5, 5, 3, ball=ball, matmul=mm)
     with torch.no_grad():
-        torch.nn.init.eye_(conv.weight_mm)
+        if mm:
+            torch.nn.init.eye_(conv.weight_mm)
         conv.weight_avg.normal_()
         weight_avg = conv.weight_avg.detach().view(3, 3)
     points = ball.random(1, 1, 3, 3, 5)
@@ -446,11 +450,15 @@ def test_weighted_average_equals_conv():
     ball.assert_check_point_on_manifold(avg2)
 
 
-def test_two_points_average_equals_conv():
+@pytest.mark.parametrize("mm", [True, False])
+def test_two_points_average_equals_conv(mm):
     ball = geoopt.PoincareBall()
-    conv = geoopt_layers.poincare.MobiusConv2d(5, 5, 3, points_in=2, ball=ball)
+    conv = geoopt_layers.poincare.MobiusConv2d(
+        5, 5, 3, points_in=2, ball=ball, matmul=mm
+    )
     with torch.no_grad():
-        torch.nn.init.eye_(conv.weight_mm)
+        if mm:
+            torch.nn.init.eye_(conv.weight_mm)
         conv.weight_avg.fill_(1)
     points = ball.random(1, 2, 3, 3, 5)
     avg1 = geoopt_layers.poincare.math.poincare_mean(points, dim=-1, ball=ball)
@@ -459,11 +467,16 @@ def test_two_points_average_equals_conv():
     ball.assert_check_point_on_manifold(avg2)
 
 
-def test_two_points_weighted_average_equals_conv():
+@pytest.mark.parametrize("mm", [True, False])
+def test_two_points_weighted_average_equals_conv(mm):
     ball = geoopt.PoincareBall()
-    conv = geoopt_layers.poincare.MobiusConv2d(5, 5, 3, points_in=2, ball=ball)
+    conv = geoopt_layers.poincare.MobiusConv2d(
+        5, 5, 3, points_in=2, ball=ball, matmul=mm
+    )
     with torch.no_grad():
-        torch.nn.init.eye_(conv.weight_mm)
+        if mm:
+            torch.nn.init.eye_(conv.weight_mm)
+
         conv.weight_avg.normal_()
         weight_avg = conv.weight_avg.detach().view(2, 3, 3)
     points = ball.random(1, 2, 3, 3, 5)

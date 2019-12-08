@@ -192,15 +192,22 @@ def mobius_conv2d(
     assert weight_avg.shape[:2] == (points_out, points_in)
     if ball_out is None:
         ball_out = ball
-    input = ball.logmap0(input, dim=2)
-    input = input.transpose(1, 2).reshape(input.shape[0], -1, *input.shape[-2:])
-    input = torch.nn.functional.conv2d(input, weight_mm.view(*weight_mm.shape, 1, 1))
-    in_shape = input.shape
-    input = input.view(input.shape[0], -1, points_in, *input.shape[-2:])
-    out_dim = input.shape[1]
-    input = ball_out.expmap0(input, dim=1)
+    if weight_mm is not None:
+        input = ball.logmap0(input, dim=2)
+        input = input.transpose(1, 2).reshape(input.shape[0], -1, *input.shape[-2:])
+        input = torch.nn.functional.conv2d(
+            input, weight_mm.view(*weight_mm.shape, 1, 1)
+        )
+        in_shape = input.shape
+        input = input.view(input.shape[0], -1, points_in, *input.shape[-2:])
+        out_dim = input.shape[1]
+        input = ball_out.expmap0(input, dim=1)
+    else:
+        input = input.transpose(1, 2)
+        in_shape = input.shape[0], -1, *input.shape[-2:]
+        out_dim = input.shape[1]
     gamma = ball_out.lambda_x(input, dim=1, keepdim=True)
-    nominator = (input * gamma).view(in_shape)
+    nominator = (input * gamma).reshape(in_shape)
     denominator = (gamma - 1).view(input.shape[0], points_in, *input.shape[-2:])
     # [B, (p1_0, p2_0, p3_0, p4_0, ..., p1_D, p2_0, p3_D, p4_D), H, W)
     weight_avg_d = weight_avg.repeat_interleave(out_dim, dim=0)
