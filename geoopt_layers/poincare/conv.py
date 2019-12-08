@@ -17,7 +17,7 @@ class MobiusConv2d(ManifoldModule):
 
     Parameters
     ----------
-    dim_in : int
+    dim : int
         dimension input of Poincare Ball
     dim_out : int
         dimension output of Poincare Ball
@@ -41,25 +41,27 @@ class MobiusConv2d(ManifoldModule):
 
     def __init__(
         self,
-        dim_in,
-        dim_out,
+        dim,
         kernel_size,
         stride=1,
         padding=0,
         dilation=1,
         *,
+        dim_out=None,
         points_in=1,
         points_out=1,
         ball,
         ball_out=None,
-        matmul=True,
+        matmul=True
     ):
         super().__init__()
         self.ball = ball
         if ball_out is None:
             ball_out = ball
+        if dim_out is None:
+            dim_out = dim
         self.ball_out = ball_out
-        self.dim_in = dim_in
+        self.dim = dim
         self.dim_out = dim_out
         self.kernel_size = _pair(kernel_size)
         self.stride = _pair(stride)
@@ -70,13 +72,19 @@ class MobiusConv2d(ManifoldModule):
         self.matmul = matmul
         if self.matmul:
             self.weight_mm = torch.nn.Parameter(
-                torch.empty(dim_out * points_in, dim_in * points_in), requires_grad=True
+                torch.empty(dim_out * points_in, dim * points_in), requires_grad=True
             )
         else:
             self.register_parameter("weight_mm", None)
             if ball is not ball_out:
                 raise ValueError(
                     "If not performing matmul, output_ball should be same as input ball"
+                )
+            if dim_out != dim:
+                raise ValueError(
+                    "If not performing matmul, dim_out ({}) should be same as dim {}".format(
+                        dim_out, dim
+                    )
                 )
         self.weight_avg = torch.nn.Parameter(
             torch.empty(points_out, points_in, *self.kernel_size), requires_grad=True
@@ -113,7 +121,8 @@ class MobiusConv2d(ManifoldModule):
             "padding={padding}, "
             "dilation={dilation}, "
             "points_in={points_in}, "
-            "points_out={points_out}"
+            "points_out={points_out}, "
+            "matmul={matmul}"
         ).format(**self.__dict__)
 
     @torch.no_grad()
