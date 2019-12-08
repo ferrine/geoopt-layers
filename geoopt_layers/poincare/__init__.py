@@ -16,14 +16,17 @@ from .centroids import (
     Distance2PoincareCentroids,
     Distance2PoincareCentroids1d,
     Distance2PoincareCentroids2d,
+    Distance2PoincareCentroids3d,
     WeightedPoincareCentroids,
     WeightedPoincareCentroids1d,
     WeightedPoincareCentroids2d,
+    WeightedPoincareCentroids3d,
 )
 from .hyperplanes import (
     Distance2PoincareHyperplanes,
     Distance2PoincareHyperplanes1d,
     Distance2PoincareHyperplanes2d,
+    Distance2PoincareHyperplanes3d,
 )
 from .conv import MobiusConv2d
 from . import math
