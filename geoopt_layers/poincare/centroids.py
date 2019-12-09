@@ -17,6 +17,7 @@ __all__ = [
 ]
 
 
+@torch.no_grad()
 def keep_zero(mod, input):
     if mod.training:
         mod.centroids[0] = 0.0
