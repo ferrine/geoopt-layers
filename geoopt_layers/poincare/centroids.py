@@ -19,8 +19,7 @@ __all__ = [
 
 @torch.no_grad()
 def keep_zero(mod, input):
-    if mod.training:
-        mod.centroids[0] = 0.0
+    mod.centroids[0] = 0.0
 
 
 class Distance2PoincareCentroids(distance.Distance2Centroids):
