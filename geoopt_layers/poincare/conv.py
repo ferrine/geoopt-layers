@@ -114,7 +114,7 @@ class MobiusConv2d(ManifoldModule):
 
     def extra_repr(self) -> str:
         return (
-            "dim_in={dim_in}, "
+            "dim_in={dim}, "
             "dim_out={dim_out}, "
             "kernel_size={kernel_size}, "
             "stride={stride}, "
