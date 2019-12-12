@@ -4,6 +4,9 @@ import torch
 from geoopt_layers.utils import reshape_shape
 
 
+__all__ = ["Reshape", "Permute", "Permuted"]
+
+
 class Reshape(torch.nn.Module):
     def __init__(self, *pattern):
         super().__init__()

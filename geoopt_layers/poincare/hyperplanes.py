@@ -74,10 +74,10 @@ class Distance2PoincareHyperplanes(ManifoldModule):
     def reset_parameters(self):
         direction = torch.randn_like(self.point)
         direction /= direction.norm(dim=-1, keepdim=True)
-        distance = torch.empty_like(self.point[..., 0]).normal_(std=self.std / (2 / 3.14) ** .5)
-        self.point.set_(
-            self.ball.expmap0(direction * distance.unsqueeze(-1))
+        distance = torch.empty_like(self.point[..., 0]).normal_(
+            std=self.std / (2 / 3.14) ** 0.5
         )
+        self.point.set_(self.ball.expmap0(direction * distance.unsqueeze(-1)))
         if self.tangent is not None:
             # this is a good initialization
             # without it you usually get stuck in strange optimum
