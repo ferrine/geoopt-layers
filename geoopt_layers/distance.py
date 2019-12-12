@@ -149,14 +149,16 @@ class KNNIndex(PairwiseDistances):
             for i, (mini_x, mini_y) in enumerate(
                 zip(x.unbind(self.unroll), y.unbind(self.unroll))
             ):
-                distances = super().forward(
-                    mini_x.unsqueeze(self.unroll), mini_y.unsqueeze(self.unroll)
-                )
-                _, idx = distances.topk(k=self.k, dim=dim, largest=False)
                 slc = tuple(
                     slice(None) if d != self.unroll else i for d in range(idx_out.dim())
                 )
-                idx_out[slc] = idx
+                idx_out[slc] = (
+                    super()
+                    .forward(
+                        mini_x.unsqueeze(self.unroll), mini_y.unsqueeze(self.unroll)
+                    )
+                    .topk(k=self.k, dim=dim, largest=False)[1]
+                )
             return idx_out
 
 
