@@ -92,3 +92,15 @@ def test_knn_permutations():
     knn_points_2 = knn_points_2.permute(2, 3, 4, 0, 1, 5)
     man.assert_check_point_on_manifold(knn_points_1)
     np.testing.assert_allclose(knn_points_1, knn_points_2)
+
+
+def test_knn_unroll():
+    man = geoopt.Sphere()
+    layer = geoopt_layers.KNN(manifold=man, dim=1, k=5)
+    layer_u = geoopt_layers.KNN(manifold=man, dim=1, k=5, unroll=0)
+    points = man.random(7, 10, 9)
+    knn_points1 = layer(points)
+    knn_points2 = layer_u(points)
+    assert knn_points1.shape == (7, 10, 5, 9)
+    assert knn_points1.shape == knn_points2.shape
+    np.testing.assert_allclose(knn_points1, knn_points2)

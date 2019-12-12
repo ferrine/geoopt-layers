@@ -122,37 +122,49 @@ class KNNIndex(PairwiseDistances):
 
     """
 
-    def __init__(
-        self, manifold, k: int, dim: int, squared: bool = False, return_distances=False
-    ):
+    def __init__(self, manifold, k: int, dim: int, squared: bool = False, unroll=None):
         super().__init__(manifold=manifold, dim=dim, squared=squared)
         self.k = k
-        self.return_distances = return_distances
+        self.unroll = unroll
 
+    @torch.no_grad()
     def forward(self, x, y=None):
-        with torch.set_grad_enabled(self.return_distances):
+        if self.dim < 0:
+            dim = self.dim + self.manifold.ndim
+        else:
+            dim = self.dim + 1
+        if self.unroll is None:
             distances = super().forward(x, y)
-            dim = idx2sign(self.dim, distances.dim()) + 1
-            distances, idx = distances.topk(k=self.k, dim=dim, largest=False)
-        if self.return_distances:
-            return distances, idx
-        else:
+            _, idx = distances.topk(k=self.k, dim=dim, largest=False)
             return idx
-
-
-def swap_end_dims(x, *dims):
-    for i, dim in zip(range(-len(dims), 0), dims):
-        j = idx2sign(dim, x.dim())
-        if j == i:
-            continue
         else:
-            x = x.transpose(i, j)
-    return x
+            shape_x = list(x.shape)
+            shape_y = list(y.shape)
+            shape_y[self.dim] = self.k
+            shape_y.insert(self.dim, 1)
+            shape_x.insert(self.dim + 1, 1)
+            result_shape = geoopt.utils.broadcast_shapes(shape_x, shape_y)
+            result_shape = result_shape[: -self.manifold.ndim]
+            idx_out = torch.empty(result_shape, dtype=torch.int64, device=x.device)
+            for i, (mini_x, mini_y) in enumerate(
+                zip(x.unbind(self.unroll), y.unbind(self.unroll))
+            ):
+                distances = super().forward(
+                    mini_x.unsqueeze(self.unroll), mini_y.unsqueeze(self.unroll)
+                )
+                _, idx = distances.topk(k=self.k, dim=dim, largest=False)
+                slc = tuple(
+                    slice(None) if d != self.unroll else i for d in range(idx_out.dim())
+                )
+                idx_out[slc] = idx
+            return idx_out
 
 
 class KNN(KNNIndex):
-    def __init__(self, manifold, k: int, dim: int, squared: bool = False):
-        super().__init__(manifold=manifold, k=k, dim=dim, squared=squared)
+    def __init__(self, manifold, k: int, dim: int, squared: bool = False, unroll=None):
+        super().__init__(
+            manifold=manifold, k=k, dim=dim, squared=squared, unroll=unroll
+        )
 
     def forward(self, x, y=None):
         if y is None:
