@@ -1,7 +1,7 @@
 from geoopt_layers.utils import idx2sign, prod
 from geoopt.utils import size2shape
-
-__all__ = ["poincare_mean", "poincare_lincomb", "apply_radial"]
+import torch_scatter
+__all__ = ["poincare_mean", "poincare_lincomb", "apply_radial", "poincare_mean_scatter_"]
 
 
 def _drop_dims(tensor, dims):
@@ -61,6 +61,14 @@ def poincare_mean(xs, weights=None, *, ball, reducedim=None, dim=-1, keepdim=Fal
     if not keepdim:
         mean = _drop_dims(mean, reducedim)
     return mean
+
+
+def poincare_mean_scatter_(src, index, dim=0, dim_size=None, *, ball):
+    """
+    Compute Scattered Einstein midpoint in Poincare coordinates.
+    """
+    # scatter_*(src, index, dim, None, dim_size, fill_value)
+    raise NotImplementedError
 
 
 def poincare_lincomb_einstein(
