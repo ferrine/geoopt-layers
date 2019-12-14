@@ -1,17 +1,24 @@
 import inspect
 
 import torch
-from ..math import poincare_mean_scatter_
+from ..math import poincare_mean_scatter
 
 special_args = [
-    'edge_index', 'edge_index_i', 'edge_index_j', 'size', 'size_i', 'size_j'
+    "edge_index",
+    "edge_index_i",
+    "edge_index_j",
+    "size",
+    "size_i",
+    "size_j",
 ]
-__size_error_msg__ = ('All tensors which should get mapped to the same source '
-                      'or target nodes must be of same size in dimension 0.')
+__size_error_msg__ = (
+    "All tensors which should get mapped to the same source "
+    "or target nodes must be of same size in dimension 0."
+)
 
 
-class MessagePassing(torch.nn.Module):
-    r"""Base class for creating message passing layers
+class HyperbolicMessagePassing(torch.nn.Module):
+    r"""Base class for creating message passing layers with Hyperbolic aggregation
 
     .. math::
         \mathbf{x}_i^{\prime} = \gamma_{\mathbf{\Theta}} \left( \mathbf{x}_i,
@@ -33,19 +40,22 @@ class MessagePassing(torch.nn.Module):
             (:obj:`"source_to_target"` or :obj:`"target_to_source"`).
             (default: :obj:`"source_to_target"`)
     """
-    def __init__(self, aggr='add', flow='source_to_target'):
-        super(MessagePassing, self).__init__()
 
-        self.aggr = aggr
-        assert self.aggr in ['add', 'mean']
+    def __init__(self, flow="source_to_target", *, ball):
+        super(HyperbolicMessagePassing, self).__init__()
+        self.ball = ball
+        self.aggr = "mean"
+        assert self.aggr in ["mean"]
 
         self.flow = flow
-        assert self.flow in ['source_to_target', 'target_to_source']
+        assert self.flow in ["source_to_target", "target_to_source"]
 
         self.__message_args__ = inspect.getfullargspec(self.message)[0][1:]
-        self.__special_args__ = [(i, arg)
-                                 for i, arg in enumerate(self.__message_args__)
-                                 if arg in special_args]
+        self.__special_args__ = [
+            (i, arg)
+            for i, arg in enumerate(self.__message_args__)
+            if arg in special_args
+        ]
         self.__message_args__ = [
             arg for arg in self.__message_args__ if arg not in special_args
         ]
@@ -71,7 +81,7 @@ class MessagePassing(torch.nn.Module):
         size = [None, None] if size is None else list(size)
         assert len(size) == 2
 
-        i, j = (0, 1) if self.flow == 'target_to_source' else (1, 0)
+        i, j = (0, 1) if self.flow == "target_to_source" else (1, 0)
         ij = {"_i": i, "_j": j}
 
         message_args = []
@@ -107,8 +117,8 @@ class MessagePassing(torch.nn.Module):
         size[0] = size[1] if size[0] is None else size[0]
         size[1] = size[0] if size[1] is None else size[1]
 
-        kwargs['edge_index'] = edge_index
-        kwargs['size'] = size
+        kwargs["edge_index"] = edge_index
+        kwargs["size"] = size
 
         for (idx, arg) in self.__special_args__:
             if arg[-2:] in ij.keys():
@@ -119,9 +129,10 @@ class MessagePassing(torch.nn.Module):
         update_args = [kwargs[arg] for arg in self.__update_args__]
 
         out = self.message(*message_args)
-        out = poincare_mean_scatter_(self.aggr, out, edge_index[i], dim, dim_size=size[i])
+        out = poincare_mean_scatter(
+            out, edge_index[i], dim, dim_size=size[i], ball=self.ball
+        )
         out = self.update(out, *update_args)
-
         return out
 
     def message(self, x_j):  # pragma: no cover

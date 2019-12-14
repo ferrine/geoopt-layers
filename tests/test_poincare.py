@@ -497,3 +497,16 @@ def test_random_init_mobius_conv():
     out = conv(points)
     assert out.shape == (3, 4, 7, 1, 1)
     ball.assert_check_point_on_manifold(out.permute(0, 1, 3, 4, 2))
+
+
+def test_poincare_mean_scatter():
+    ball = geoopt.PoincareBall()
+    points = ball.random(10, 5, std=1 / 5 ** 0.5)
+    means = geoopt_layers.poincare.math.poincare_mean_scatter(
+        points, index=torch.tensor([0, 0, 0, 0, 0, 1, 1, 1, 1, 1]), ball=ball
+    )
+    assert means.shape == (2, 5)
+    mean_1 = geoopt_layers.poincare.math.poincare_mean(points[:5], ball=ball)
+    mean_2 = geoopt_layers.poincare.math.poincare_mean(points[5:], ball=ball)
+    np.testing.assert_allclose(means[0], mean_1, atol=1e-5)
+    np.testing.assert_allclose(means[1], mean_2, atol=1e-5)
