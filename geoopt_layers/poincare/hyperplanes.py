@@ -31,21 +31,21 @@ class Distance2PoincareHyperplanes(ManifoldModule):
         self.ball = ball
         self.plane_shape = geoopt.utils.size2shape(plane_shape)
         self.num_planes = num_planes
-        self.point = geoopt.ManifoldParameter(
+        self.points = geoopt.ManifoldParameter(
             torch.empty(num_planes - zero, plane_shape), manifold=self.ball
         )
         self.zero = zero
-        tangent = torch.empty_like(self.point)
+        tangent = torch.empty_like(self.points)
         self.sphere = sphere = geoopt.manifolds.Sphere()
-        self.tangent = geoopt.ManifoldParameter(tangent, manifold=sphere)
+        self.tangents = geoopt.ManifoldParameter(tangent, manifold=sphere)
         self.std = std
         self.reset_parameters()
 
     def forward(self, input):
         input_p = input.unsqueeze(-self.n - 1)
-        point = self.point.permute(1, 0)
+        point = self.points.permute(1, 0)
         point = point.view(point.shape + (1,) * self.n)
-        tangent = self.tangent.permute(1, 0)
+        tangent = self.tangents.permute(1, 0)
         tangent = tangent.view(tangent.shape + (1,) * self.n)
 
         distance = self.ball.dist2plane(
@@ -72,16 +72,16 @@ class Distance2PoincareHyperplanes(ManifoldModule):
 
     @torch.no_grad()
     def reset_parameters(self):
-        direction = torch.randn_like(self.point)
+        direction = torch.randn_like(self.points)
         direction /= direction.norm(dim=-1, keepdim=True)
-        distance = torch.empty_like(self.point[..., 0]).normal_(
+        distance = torch.empty_like(self.points[..., 0]).normal_(
             std=self.std / (2 / 3.14) ** 0.5
         )
-        self.point.set_(self.ball.expmap0(direction * distance.unsqueeze(-1)))
-        if self.tangent is not None:
+        self.points.set_(self.ball.expmap0(direction * distance.unsqueeze(-1)))
+        if self.tangents is not None:
             # this is a good initialization
             # without it you usually get stuck in strange optimum
-            self.tangent.copy_(self.point).proj_()
+            self.tangents.copy_(self.points).proj_()
 
 
 class Distance2PoincareHyperplanes1d(Distance2PoincareHyperplanes):
