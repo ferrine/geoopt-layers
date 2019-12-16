@@ -154,7 +154,7 @@ def mobius_linear(
     if source_origin is not None and target_origin is not None:
         # We need to take care of origins
         tangent = ball.logmap(source_origin, input)
-        new_tangent = tangent @ weight
+        new_tangent = tangent @ weight.t()
         if ball is ball_out:
             # In case same manifolds are used, we need to perform parallel transport
             new_tangent = ball.transp(source_origin, target_origin, new_tangent)
@@ -168,7 +168,7 @@ def mobius_linear(
                 output = ball.mobius_add(output, bias)
         else:
             tangent = ball.logmap0(input)
-            new_tangent = tangent @ weight
+            new_tangent = tangent @ weight.t()
             output = ball_out.expmap0(new_tangent)
             if bias is not None:
                 output = ball_out.mobius_add(output, bias)

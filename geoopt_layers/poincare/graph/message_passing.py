@@ -2,6 +2,7 @@ import inspect
 
 import torch
 from ..math import poincare_mean_scatter
+from ...base import ManifoldModule
 
 special_args = [
     "edge_index",
@@ -17,7 +18,7 @@ __size_error_msg__ = (
 )
 
 
-class HyperbolicMessagePassing(torch.nn.Module):
+class HyperbolicMessagePassing(ManifoldModule):
     r"""Base class for creating message passing layers with Hyperbolic aggregation
 
     .. math::
@@ -32,21 +33,27 @@ class HyperbolicMessagePassing(torch.nn.Module):
     See `here <https://pytorch-geometric.readthedocs.io/en/latest/notes/
     create_gnn.html>`__ for the accompanying tutorial.
 
-    Args:
-        aggr (string, optional): The aggregation scheme to use
-            (:obj:`"add"`, :obj:`"mean"` or :obj:`"max"`).
-            (default: :obj:`"add"`)
-        flow (string, optional): The flow direction of message passing
+    Parameters
+    ----------
+        aggr : str
+            The aggregation scheme to use
+            (:obj:`"mean"`, :obj:`"sum"``).
+            (default: :obj:`"mean"`)
+        flow : str
+            The flow direction of message passing
             (:obj:`"source_to_target"` or :obj:`"target_to_source"`).
             (default: :obj:`"source_to_target"`)
     """
 
-    def __init__(self, aggr="mean", flow="source_to_target", *, ball):
+    def __init__(
+        self, aggr="mean", flow="source_to_target", *, ball, aggr_method="einstein"
+    ):
         super(HyperbolicMessagePassing, self).__init__()
         self.ball = ball
         self.aggr = aggr
+        self.aggr_method = aggr_method
         assert self.aggr in {"mean", "sum"}
-
+        assert self.aggr_method in {"einstein", "tangent"}
         self.flow = flow
         assert self.flow in ["source_to_target", "target_to_source"]
 
@@ -136,6 +143,7 @@ class HyperbolicMessagePassing(torch.nn.Module):
             dim_size=size[i],
             ball=self.ball,
             linkomb=self.aggr == "sum",
+            method=self.aggr_method,
         )
         out = self.update(out, *update_args)
         return out

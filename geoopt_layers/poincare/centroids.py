@@ -48,11 +48,7 @@ class Distance2PoincareCentroids(distance.Distance2Centroids):
 
     @torch.no_grad()
     def reset_parameters(self):
-        self.centroids.set_(
-            self.manifold.random(
-                self.centroids.shape, std=self.std
-            )
-        )
+        self.centroids.set_(self.manifold.random(self.centroids.shape, std=self.std))
         self.centroids[0] = 0.0
 
     def extra_repr(self) -> str:
@@ -167,9 +163,7 @@ class WeightedPoincareCentroids(ManifoldModule):
             "method={method}, "
             "learn_origin={learn_origin}, "
             "linkomb={linkomb}, "
-            "zero={zero}".format(
-                **self.__dict__, self=self
-            )
+            "zero={zero}".format(**self.__dict__, self=self)
         )
 
 

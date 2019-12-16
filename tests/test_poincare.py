@@ -6,11 +6,6 @@ import pytest
 import numpy as np
 
 
-@pytest.fixture(autouse=True, params=[42, 41])
-def seed(request):
-    torch.manual_seed(request.param)
-
-
 def test_linear_same_ball():
     ball = geoopt.PoincareBall()
     point = ball.random(2, 3, 5)
@@ -54,6 +49,18 @@ def test_linear_new_ball_origin():
     )
     out = layer(point)
 
+    ball2.assert_check_point_on_manifold(out)
+
+
+def test_linear_new_ball_origin():
+    ball = geoopt.PoincareBall()
+    ball2 = geoopt.PoincareBall()
+    point = ball.random(2, 3, 5)
+    layer = geoopt_layers.poincare.MobiusLinear(
+        5, 7, ball=ball, ball_out=ball2, learn_origin=True
+    )
+    out = layer(point)
+    assert out.shape == (2, 3, 7)
     ball2.assert_check_point_on_manifold(out)
 
 
