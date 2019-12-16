@@ -139,6 +139,7 @@ class HyperbolicMessagePassing(ManifoldModule):
         out = poincare_mean_scatter(
             out,
             edge_index[i],
+            weights=kwargs.get("edge_weight"),
             dim=dim,
             dim_size=size[i],
             ball=self.ball,

@@ -63,7 +63,7 @@ class HyperbolicGraphConv(HyperbolicMessagePassing):
         return self.propagate(edge_index, size=size, x=x, h=h, edge_weight=edge_weight)
 
     def message(self, h_j, edge_weight):
-        return h_j if edge_weight is None else edge_weight.view(-1, 1) * h_j
+        return h_j
 
     def update(self, aggr_out, x):
         return self.ball.mobius_add(aggr_out, self.lin_loop(x))

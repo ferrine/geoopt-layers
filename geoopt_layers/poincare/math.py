@@ -219,6 +219,7 @@ def poincare_mean_einstein_scatter(
     nominator = gamma * src
     denominator = gamma - 1
     if weights is not None:
+        weights = weights.unsqueeze(-1)
         nominator = nominator * weights
         denominator = denominator * weights
     nominator = torch_scatter.scatter_add(nominator, index, dim, None, dim_size, 0)
@@ -236,7 +237,6 @@ def poincare_mean_einstein_scatter(
             shape[dim] = -1
             alpha = alpha.view(shape)
         else:
-            weights = weights.unsqueeze(-1)
             alpha = (
                 torch_scatter.scatter_add(weights, index, dim, None, dim_size, 0) / 2
             )
@@ -261,7 +261,7 @@ def poincare_mean_tangent_scatter(
         else:
             result = torch_scatter.scatter_mean(log, index, dim, None, dim_size, 0)
     elif weights.dim() == 1:
-        shape = [1 for _ in log.dims()]
+        shape = [1 for _ in range(log.dim())]
         shape[dim] = -1
         weights = weights.view(shape)
         result = torch_scatter.scatter_add(weights * log, index, dim, None, dim_size, 0)
