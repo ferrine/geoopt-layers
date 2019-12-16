@@ -50,7 +50,7 @@ class Distance2PoincareCentroids(distance.Distance2Centroids):
     def reset_parameters(self):
         self.centroids.set_(
             self.manifold.random(
-                self.centroids.shape, std=self.std / self.centroid_shape[-1] ** 0.5
+                self.centroids.shape, std=self.std
             )
         )
         self.centroids[0] = 0.0
@@ -133,7 +133,7 @@ class WeightedPoincareCentroids(ManifoldModule):
         self.centroids.set_(
             self.manifold.random(
                 self.centroids.shape,
-                std=self.std / self.centroid_shape[-1] ** 0.5,
+                std=self.std,
                 dtype=self.centroids.dtype,
                 device=self.centroids.device,
             )

@@ -70,7 +70,7 @@ class Distance2PoincareHyperplanes(ManifoldModule):
         direction = torch.randn_like(self.points)
         direction /= direction.norm(dim=-1, keepdim=True)
         distance = torch.empty_like(self.points[..., 0]).normal_(
-            std=self.std / (self.points.shape[-1] * 2 / 3.14) ** 0.5
+            std=self.std
         )
         self.points.set_(self.ball.expmap0(direction * distance.unsqueeze(-1)))
 
