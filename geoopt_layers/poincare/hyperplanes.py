@@ -35,21 +35,16 @@ class Distance2PoincareHyperplanes(ManifoldModule):
             torch.empty(num_planes - zero, plane_shape), manifold=self.ball
         )
         self.zero = zero
-        tangent = torch.empty_like(self.points)
-        self.sphere = sphere = geoopt.manifolds.Sphere()
-        self.tangents = geoopt.ManifoldParameter(tangent, manifold=sphere)
         self.std = std
         self.reset_parameters()
 
     def forward(self, input):
         input_p = input.unsqueeze(-self.n - 1)
-        point = self.points.permute(1, 0)
-        point = point.view(point.shape + (1,) * self.n)
-        tangent = self.tangents.permute(1, 0)
-        tangent = tangent.view(tangent.shape + (1,) * self.n)
+        points = self.points.permute(1, 0)
+        points = points.view(points.shape + (1,) * self.n)
 
         distance = self.ball.dist2plane(
-            x=input_p, p=point, a=tangent, signed=self.signed, dim=-self.n - 2
+            x=input_p, p=points, a=points, signed=self.signed, dim=-self.n - 2
         )
         if self.squared and self.signed:
             sign = distance.sign()
@@ -75,13 +70,9 @@ class Distance2PoincareHyperplanes(ManifoldModule):
         direction = torch.randn_like(self.points)
         direction /= direction.norm(dim=-1, keepdim=True)
         distance = torch.empty_like(self.points[..., 0]).normal_(
-            std=self.std / (2 / 3.14) ** 0.5
+            std=self.std / (self.points.shape[-1] * 2 / 3.14) ** 0.5
         )
         self.points.set_(self.ball.expmap0(direction * distance.unsqueeze(-1)))
-        if self.tangents is not None:
-            # this is a good initialization
-            # without it you usually get stuck in strange optimum
-            self.tangents.copy_(self.points).proj_()
 
 
 class Distance2PoincareHyperplanes1d(Distance2PoincareHyperplanes):
