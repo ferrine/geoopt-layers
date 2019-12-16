@@ -510,3 +510,20 @@ def test_poincare_mean_scatter():
     mean_2 = geoopt_layers.poincare.math.poincare_mean(points[5:], ball=ball)
     np.testing.assert_allclose(means[0], mean_1, atol=1e-5)
     np.testing.assert_allclose(means[1], mean_2, atol=1e-5)
+
+
+@pytest.mark.parametrize(
+    "linkomb,method", itertools.product([True, False], ["einstein", "tangent"])
+)
+def test_poincare_mean_scatter_tangent(linkomb, method):
+    ball = geoopt.PoincareBall()
+    points = ball.random(10, 5, std=1 / 5 ** 0.5)
+    means = geoopt_layers.poincare.math.poincare_mean_scatter(
+        points,
+        index=torch.tensor([0, 0, 0, 0, 0, 1, 1, 1, 1, 1]),
+        ball=ball,
+        method=method,
+        linkomb=linkomb,
+    )
+    assert means.shape == (2, 5)
+    ball.assert_check_point_on_manifold(means)

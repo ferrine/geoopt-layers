@@ -1,7 +1,7 @@
 import geoopt
 from geoopt_layers.base import ManifoldModule
 from .. import distance
-from .math import poincare_lincomb
+from .math import poincare_mean
 import torch
 
 
@@ -145,7 +145,7 @@ class WeightedPoincareCentroids(ManifoldModule):
             origin = self.origin.view(self.origin.shape + (1,) * self.n)
         else:
             origin = None
-        return poincare_lincomb(
+        return poincare_mean(
             self.centroids.view(self.centroids.shape + (1,) * self.n),
             weights=weights,
             reducedim=-self.n - 2,
@@ -154,6 +154,7 @@ class WeightedPoincareCentroids(ManifoldModule):
             keepdim=False,
             method=self.method,
             origin=origin,
+            linkomb=True,
         )
 
     def extra_repr(self) -> str:

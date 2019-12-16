@@ -41,11 +41,11 @@ class HyperbolicMessagePassing(torch.nn.Module):
             (default: :obj:`"source_to_target"`)
     """
 
-    def __init__(self, flow="source_to_target", *, ball):
+    def __init__(self, aggr="mean", flow="source_to_target", *, ball):
         super(HyperbolicMessagePassing, self).__init__()
         self.ball = ball
-        self.aggr = "mean"
-        assert self.aggr in ["mean"]
+        self.aggr = aggr
+        assert self.aggr in {"mean", "sum"}
 
         self.flow = flow
         assert self.flow in ["source_to_target", "target_to_source"]
@@ -130,7 +130,12 @@ class HyperbolicMessagePassing(torch.nn.Module):
 
         out = self.message(*message_args)
         out = poincare_mean_scatter(
-            out, edge_index[i], dim, dim_size=size[i], ball=self.ball
+            out,
+            edge_index[i],
+            dim=dim,
+            dim_size=size[i],
+            ball=self.ball,
+            linkomb=self.aggr == "sum",
         )
         out = self.update(out, *update_args)
         return out
