@@ -1,4 +1,3 @@
-import geoopt.utils
 import functools
 import operator
 
