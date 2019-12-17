@@ -34,10 +34,13 @@ def test_linear_new_ball1():
     ball.assert_check_point_on_manifold(out)
 
 
-def test_linear_no_dim_change():
+def test_linear_dim_change():
     ball = geoopt.PoincareBall()
-    with pytest.raises(ValueError):
-        geoopt_layers.poincare.MobiusLinear(5, 3, ball=ball, ball_out=ball)
+    point = ball.random(2, 3, 5)
+    layer = geoopt_layers.poincare.MobiusLinear(5, 3, ball=ball, ball_out=ball)
+    out = layer(point)
+
+    ball.assert_check_point_on_manifold(out)
 
 
 def test_linear_new_ball_origin():

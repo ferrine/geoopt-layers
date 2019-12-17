@@ -46,7 +46,13 @@ class HyperbolicMessagePassing(ManifoldModule):
     """
 
     def __init__(
-        self, aggr="mean", flow="source_to_target", *, ball, aggr_method="einstein"
+        self,
+        aggr="mean",
+        flow="source_to_target",
+        *,
+        ball,
+        aggr_method="einstein",
+        node_dim=0,
     ):
         super(HyperbolicMessagePassing, self).__init__()
         self.ball = ball
@@ -56,7 +62,8 @@ class HyperbolicMessagePassing(ManifoldModule):
         assert self.aggr_method in {"einstein", "tangent"}
         self.flow = flow
         assert self.flow in ["source_to_target", "target_to_source"]
-
+        self.node_dim = 0
+        assert node_dim in {0}  # other dims are not yet supported
         self.__message_args__ = inspect.getfullargspec(self.message)[0][1:]
         self.__special_args__ = [
             (i, arg)
@@ -68,7 +75,7 @@ class HyperbolicMessagePassing(ManifoldModule):
         ]
         self.__update_args__ = inspect.getfullargspec(self.update)[0][2:]
 
-    def propagate(self, edge_index, size=None, dim=0, **kwargs):
+    def propagate(self, edge_index, size=None, **kwargs):
         r"""The initial call to start propagating messages.
 
         Args:
@@ -84,7 +91,7 @@ class HyperbolicMessagePassing(ManifoldModule):
             **kwargs: Any additional data which is needed to construct messages
                 and to update node embeddings.
         """
-        assert dim == 0
+        dim = self.node_dim  # other dims are not yet supported
         size = [None, None] if size is None else list(size)
         assert len(size) == 2
 

@@ -59,11 +59,7 @@ class MobiusLinear(torch.nn.Linear, ManifoldModule):
         # for manifolds that have parameters like Poincare Ball
         # we have to attach them to the closure Module.
         # It is hard to implement device allocation for manifolds in other case.
-        if ball_out is None or ball_out is ball:
-            if not in_features == out_features:
-                raise ValueError(
-                    "Please explicitly provide a different instance of PoincareBall to create different out_features"
-                )
+        if ball_out is None:
             ball_out = ball
         super().__init__(in_features=in_features, out_features=out_features, bias=bias)
         self.ball = ball
