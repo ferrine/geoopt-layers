@@ -30,3 +30,5 @@ from .hyperplanes import (
 )
 from .conv import MobiusConv2d
 from . import math
+from . import graph
+from .graph import HyperbolicMessagePassing, HyperbolicGraphConv
