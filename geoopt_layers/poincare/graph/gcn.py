@@ -1,7 +1,5 @@
 import torch.nn
-from torch_scatter import scatter_add
 from .message_passing import HyperbolicMessagePassing
-from torch_geometric.utils import add_remaining_self_loops
 from ..linear import MobiusLinear
 
 
@@ -64,6 +62,9 @@ class HyperbolicGCNConv(HyperbolicMessagePassing):
 
     @staticmethod
     def norm(edge_index, num_nodes, edge_weight=None, improved=False, dtype=None):
+        from torch_scatter import scatter_add
+        from torch_geometric.utils import add_remaining_self_loops
+
         if edge_weight is None:
             edge_weight = torch.ones(
                 (edge_index.size(1),), dtype=dtype, device=edge_index.device

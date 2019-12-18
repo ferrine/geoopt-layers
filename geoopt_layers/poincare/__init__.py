@@ -32,3 +32,5 @@ from .conv import MobiusConv2d
 from . import math
 from . import graph
 from .graph import HyperbolicMessagePassing, HyperbolicGraphConv
+from . import noise
+from .noise import Noise
