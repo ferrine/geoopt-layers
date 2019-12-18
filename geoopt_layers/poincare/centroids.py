@@ -92,7 +92,7 @@ class WeightedPoincareCentroids(ManifoldModule):
         learn_origin=True,
         std=1.0,
         zero=False,
-        linkomb=True,
+        lincomb=True,
     ):
         super().__init__()
 
@@ -102,7 +102,7 @@ class WeightedPoincareCentroids(ManifoldModule):
         self.std = std
         self.num_centroids = num_centroids
         self.manifold = ball
-        self.linkomb = linkomb
+        self.lincomb = lincomb
         self.method = method
         self.centroids = geoopt.ManifoldParameter(
             torch.empty((num_centroids,) + centroid_shape), manifold=ball
@@ -152,7 +152,7 @@ class WeightedPoincareCentroids(ManifoldModule):
             keepdim=False,
             method=self.method,
             origin=origin,
-            linkomb=self.linkomb,
+            lincomb=self.lincomb,
         )
 
     def extra_repr(self) -> str:

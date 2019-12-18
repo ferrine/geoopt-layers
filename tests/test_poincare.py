@@ -533,7 +533,7 @@ def test_poincare_mean_scatter_tangent(linkomb, method):
         index=torch.tensor([0, 0, 0, 0, 0, 1, 1, 1, 1, 1]),
         ball=ball,
         method=method,
-        linkomb=linkomb,
+        lincomb=linkomb,
     )
     assert means.shape == (2, 5)
     ball.assert_check_point_on_manifold(means)

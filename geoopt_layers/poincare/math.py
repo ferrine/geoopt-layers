@@ -26,7 +26,7 @@ def _reduce_dim(maxdim, reducedim, dim):
 
 
 def poincare_mean_einstein(
-    xs, weights=None, *, ball, reducedim=None, dim=-1, keepdim=False, linkomb=False
+    xs, weights=None, *, ball, reducedim=None, dim=-1, keepdim=False, lincomb=False
 ):
     """
     Compute Einstein midpoint in Poincare coordinates.
@@ -45,7 +45,7 @@ def poincare_mean_einstein(
         Poincare Ball
     keepdim : bool
         retain the last dim? (default: false)
-    linkomb : bool
+    lincomb : bool
         linear combination implementation
 
     Returns
@@ -63,9 +63,9 @@ def poincare_mean_einstein(
     denominator = ((gamma - 1) * weights).sum(reducedim, keepdim=True)
     two_mean = nominator / denominator
     two_mean = torch.where(torch.isfinite(two_mean), two_mean, two_mean.new_zeros(()))
-    if linkomb and isinstance(weights, float):
+    if lincomb and isinstance(weights, float):
         alpha = 0.5 * prod((xs.shape[i] for i in reducedim))
-    elif linkomb:
+    elif lincomb:
         alpha = 0.5 * weights.sum(reducedim, keepdim=True)
     else:
         alpha = 0.5
@@ -84,7 +84,7 @@ def poincare_mean_tangent(
     dim=-1,
     keepdim=False,
     origin=None,
-    linkomb=False,
+    lincomb=False,
 ):
     """
     Compute linear combination of Poincare points in tangent space [1]_.
@@ -105,7 +105,7 @@ def poincare_mean_tangent(
         retain the last dim? (default: false)
     origin : tensor
         origin for logmap (make sure it broadcasts)
-    linkomb : bool
+    lincomb : bool
         linkomb implementation
 
     Returns
@@ -124,7 +124,7 @@ def poincare_mean_tangent(
         log_xs = ball.logmap(xs, origin, dim=dim)
     if weights is not None:
         log_xs = weights.unsqueeze(dim) * log_xs
-    if linkomb:
+    if lincomb:
         reduced = log_xs.sum(reducedim, keepdim=True)
     else:
         reduced = log_xs.mean(reducedim, keepdim=True)
@@ -147,7 +147,7 @@ def poincare_mean(
     keepdim=False,
     method="einstein",
     origin=None,
-    linkomb=False,
+    lincomb=False,
 ):
     """
     Compute linear combination of Poincare points.
@@ -170,7 +170,7 @@ def poincare_mean(
         one of ``{"einstein", "tangent"}``
     origin : tensor
         origin for logmap (make sure it broadcasts), for ``tangent`` method only
-    linkomb : bool
+    lincomb : bool
         linkomb implementation
 
     Returns
@@ -192,7 +192,7 @@ def poincare_mean(
             dim=dim,
             ball=ball,
             keepdim=keepdim,
-            linkomb=linkomb,
+            lincomb=lincomb,
         )
     else:
         return poincare_mean_tangent(
@@ -203,12 +203,12 @@ def poincare_mean(
             ball=ball,
             keepdim=keepdim,
             origin=origin,
-            linkomb=linkomb,
+            lincomb=lincomb,
         )
 
 
 def poincare_mean_einstein_scatter(
-    src, index, weights=None, dim=0, dim_size=None, *, ball, linkomb=False
+    src, index, weights=None, dim=0, dim_size=None, *, ball, lincomb=False
 ):
     """
     Compute Scattered Einstein midpoint in Poincare coordinates.
@@ -228,7 +228,7 @@ def poincare_mean_einstein_scatter(
     )
     two_mean = nominator / denominator
     two_mean = torch.where(torch.isfinite(two_mean), two_mean, two_mean.new_zeros(()))
-    if linkomb:
+    if lincomb:
         if weights is None:
             weights = src.new_full((src.size(dim),), 0.5)
         if weights.dim() == 1:
@@ -246,7 +246,7 @@ def poincare_mean_einstein_scatter(
 
 
 def poincare_mean_tangent_scatter(
-    src, index, weights=None, dim=0, dim_size=None, *, ball, linkomb=False, origin=None
+    src, index, weights=None, dim=0, dim_size=None, *, ball, lincomb=False, origin=None
 ):
     import torch_scatter
 
@@ -256,7 +256,7 @@ def poincare_mean_tangent_scatter(
         log = ball.logmap(origin, src)
 
     if weights is None:
-        if linkomb:
+        if lincomb:
             result = torch_scatter.scatter_add(log, index, dim, None, dim_size, 0)
         else:
             result = torch_scatter.scatter_mean(log, index, dim, None, dim_size, 0)
@@ -265,13 +265,13 @@ def poincare_mean_tangent_scatter(
         shape[dim] = -1
         weights = weights.view(shape)
         result = torch_scatter.scatter_add(weights * log, index, dim, None, dim_size, 0)
-        if not linkomb:
+        if not lincomb:
             denom = torch_scatter.scatter_add(weights, index, dim, None, dim_size, 1e-5)
             result = result / denom
     else:
         weights = weights.unsqueeze(-1)
         result = torch_scatter.scatter_add(weights * log, index, dim, None, dim_size, 0)
-        if not linkomb:
+        if not lincomb:
             denom = torch_scatter.scatter_add(weights, index, dim, None, dim_size, 1e-5)
             result = result / denom
     if origin is None:
@@ -289,7 +289,7 @@ def poincare_mean_scatter(
     dim_size=None,
     *,
     ball,
-    linkomb=False,
+    lincomb=False,
     origin=None,
     method="einstein",
 ):
@@ -303,7 +303,7 @@ def poincare_mean_scatter(
             dim=dim,
             dim_size=dim_size,
             ball=ball,
-            linkomb=linkomb,
+            lincomb=lincomb,
         )
     else:
         return poincare_mean_tangent_scatter(
@@ -313,7 +313,7 @@ def poincare_mean_scatter(
             dim=dim,
             dim_size=dim_size,
             ball=ball,
-            linkomb=linkomb,
+            lincomb=lincomb,
             origin=origin,
         )
 

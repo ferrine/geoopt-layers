@@ -150,7 +150,7 @@ class HyperbolicMessagePassing(ManifoldModule):
             dim=dim,
             dim_size=size[i],
             ball=self.ball,
-            linkomb=self.aggr == "sum",
+            lincomb=self.aggr == "sum",
             method=self.aggr_method,
         )
         out = self.update(out, *update_args)
