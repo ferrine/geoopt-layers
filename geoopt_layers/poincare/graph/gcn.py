@@ -41,7 +41,7 @@ class HyperbolicGCNConv(HyperbolicMessagePassing):
             learn_origin=learn_origin,
         )
         bias_shape = out_channels if bias else None
-        self.bias = self.register_origin(
+        self.register_origin(
             "bias",
             self.ball_out,
             origin_shape=bias_shape,

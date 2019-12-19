@@ -540,11 +540,7 @@ def test_poincare_mean_scatter_tangent(linkomb, method):
 
 
 @pytest.mark.parametrize(
-    "alpha,beta",
-    itertools.product(
-        [100.0, 1.0, 0.05, 0.0],
-        [100.0, 1.0, 0.05, 0.0],
-    ),
+    "alpha,beta", itertools.product([100.0, 1.0, 0.05, 0.0], [100.0, 1.0, 0.05, 0.0])
 )
 def test_noise_layer(alpha, beta):
     ball = geoopt.PoincareBall()

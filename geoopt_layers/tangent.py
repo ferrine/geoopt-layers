@@ -61,9 +61,9 @@ class TangentLambda(ManifoldModule):
                 raise ValueError("Shapes of origins should match")
         self.fn = fn
 
-    def forward(self, input):
+    def forward(self, input, *other):
         tangent = self.manifold.logmap(self.origin, input)
-        out_tangent = self.fn(tangent)
+        out_tangent = self.fn(tangent, *other)
         out_tangent = self.manifold.proju(self.origin, out_tangent)
         if self.out_origin is not self.origin:
             out_tangent = self.manifold.transp(
@@ -141,9 +141,9 @@ class RemapLambda(ManifoldModule):
                 )
         self.fn = fn
 
-    def forward(self, input):
+    def forward(self, input, *other):
         tangent = self.source_manifold.logmap(self.source_origin, input)
-        out_tangent = self.fn(tangent)
+        out_tangent = self.fn(tangent, *other)
         if self.source_manifold is self.target_manifold:
             out_tangent = self.source_manifold.transp(
                 self.source_origin, self.target_origin, out_tangent
