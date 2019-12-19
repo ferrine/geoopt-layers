@@ -1,16 +1,35 @@
 from typing import Union
 from ..base import ManifoldModule
+from .math import apply_radial
 import torch
 
 
 class Noise(ManifoldModule):
-    def __init__(self, alpha=0.05, beta=0.0, *, ball, dim=-1, grad=True):
+    """
+
+    Parameters
+    ----------
+    alpha : float
+        multiplicative part
+    beta : float
+        additive part
+    ball : geoopt.PoincareBall
+    dim : int
+        dimension to apply
+    grad : bool
+        allow grads
+    backwards : bool
+        only push back
+    """
+
+    def __init__(self, alpha=0.05, beta=0.0, *, ball, dim=-1, grad=False, backwards=True):
         super().__init__()
         self.ball = ball
         self.dim = dim
         self.grad = grad
         self.alpha = alpha
         self.beta = beta
+        self.backwards = backwards
 
     def get_sigma(self, input: torch.Tensor) -> Union[torch.Tensor, float]:
         beta = self.beta
@@ -27,6 +46,8 @@ class Noise(ManifoldModule):
             with torch.set_grad_enabled(self.grad):
                 std = self.get_sigma(input)
             eps = torch.randn_like(input) * std
+            if self.backwards:
+                eps = apply_radial(lambda x: x.clamp_max(0), eps, input)
             return self.ball.expmap(input, eps, dim=self.dim)
         else:
             return input

@@ -318,7 +318,7 @@ def poincare_mean_scatter(
         )
 
 
-def apply_radial(fn, input, basis, *, dim, norm=True):
+def apply_radial(fn, input, basis, *, dim=-1, norm=True):
     """
     Apply a given function along basis vector provided.
 
