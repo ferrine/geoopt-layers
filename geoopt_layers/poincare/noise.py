@@ -13,6 +13,8 @@ class Noise(ManifoldModule):
         multiplicative part
     beta : float
         additive part
+    gamma : float
+        scale part
     ball : geoopt.PoincareBall
     dim : int
         dimension to apply
