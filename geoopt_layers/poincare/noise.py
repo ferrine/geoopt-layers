@@ -50,7 +50,7 @@ class Noise(ManifoldModule):
         if self.training and self.gamma > 0:
             shape = list(input.shape)
             shape[self.dim] = 1
-            t = torch.empty(shape).uniform_(1 - self.gamma, 1 + self.gamma)
+            t = torch.empty(shape, device=input.device, dtype=input.dtype).uniform_(1 - self.gamma, 1 + self.gamma)
             input = self.ball.mobius_scalar_mul(t, input, dim=self.dim)
         if self.training and (self.alpha > 0 or self.beta > 0):
             with torch.set_grad_enabled(self.grad):
