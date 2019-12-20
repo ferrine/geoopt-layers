@@ -33,31 +33,31 @@ class HyperbolicSplineConv(HyperbolicMessagePassing):
 
     Parameters
     ----------
-        in_channels : int
-            Size of each input sample.
-        out_channels : int
-            Size of each output sample.
-        dim : int
-            Pseudo-coordinate dimensionality.
-        kernel_size : int
-            Size of the convolving kernel.
-        is_open_spline : bool
-            If set to :obj:`False`, the
-            operator will use a closed B-spline basis in this dimension.
-            (default :obj:`True`)
-        degree (int, optional): B-spline basis degrees. (default: :obj:`1`)
-        aggr : str
-            The aggregation operator to use
-            (:obj:`"sum"`, :obj:`"mean"`, default: :obj:`"mean"`).
-        root_weight : bool
-            If set to :obj:`False`, the layer will
-            not add transformed root node features to the output.
-            (default: :obj:`True`)
-        bias : bool
-            If set to :obj:`False`, the layer will not learn
-            an additive bias. (default: :obj:`True`)
-        **kwargs (optional): Additional arguments of
-            :class:`geoopt_layers.poincare.graph.HyperbolicMessagePassing`.
+    in_channels : int
+        Size of each input sample.
+    out_channels : int
+        Size of each output sample.
+    dim : int
+        Pseudo-coordinate dimensionality.
+    kernel_size : int
+        Size of the convolving kernel.
+    is_open_spline : bool
+        If set to :obj:`False`, the
+        operator will use a closed B-spline basis in this dimension.
+        (default :obj:`True`)
+    degree (int, optional): B-spline basis degrees. (default: :obj:`1`)
+    aggr : str
+        The aggregation operator to use
+        (:obj:`"sum"`, :obj:`"mean"`, default: :obj:`"mean"`).
+    root_weight : bool
+        If set to :obj:`False`, the layer will
+        not add transformed root node features to the output.
+        (default: :obj:`True`)
+    bias : bool
+        If set to :obj:`False`, the layer will not learn
+        an additive bias. (default: :obj:`True`)
+    **kwargs (optional): Additional arguments of
+        :class:`geoopt_layers.poincare.graph.HyperbolicMessagePassing`.
     """
 
     def __init__(
