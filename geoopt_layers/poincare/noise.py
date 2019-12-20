@@ -61,7 +61,7 @@ class Noise(ManifoldModule):
             if self.backwards:
                 # make sure expectation is still zero
                 eps = apply_radial(
-                    lambda x: std * (2 / 3.14) ** 0.5 - x.abs(), eps, input
+                    lambda x: std * (2 / 3.14 / input.size(self.dim)) ** 0.5 - x.abs(), eps, input
                 )
             return self.ball.expmap(input, eps, dim=self.dim)
         else:
