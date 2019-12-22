@@ -126,7 +126,7 @@ class Quantize(torch.autograd.Function):
         if not grad:
             ctx.save_for_backward(mask)
         else:
-            ctx.save_for_backward(None, input)
+            ctx.save_for_backward(None)
         return torch.where(mask, quantized, input)
 
     @staticmethod
