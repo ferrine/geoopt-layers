@@ -72,6 +72,9 @@ class Noise(ManifoldModule):
         else:
             return input
 
+    def extra_repr(self) -> str:
+        return "alpha={alpha}, beta={beta}, gamma={gamma}".format(**self.__dict__)
+
 
 class Discretization(ManifoldModule):
     r"""
@@ -112,3 +115,6 @@ class Discretization(ManifoldModule):
             return self.ball.expmap0(qlog, dim=self.dim)
         else:
             return input
+
+    def extra_repr(self) -> str:
+        return "granularity={granularity}, p={p}".format(**self.__dict__)
