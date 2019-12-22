@@ -135,4 +135,4 @@ class Quantize(torch.autograd.Function):
         if mask is None:
             return grad_output, None, None, None
         else:
-            return ~mask.to(grad_output.type()), None, None, None
+            return ~mask.type(grad_output.type()), None, None, None
