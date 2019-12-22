@@ -73,7 +73,7 @@ class Noise(ManifoldModule):
             return input
 
     def extra_repr(self) -> str:
-        return "alpha={alpha}, beta={beta}, gamma={gamma}".format(**self.__dict__)
+        return "alpha={alpha}, beta={beta}, gamma={gamma}, grad={grad}, backwards={backwards}".format(**self.__dict__)
 
 
 class Discretization(ManifoldModule):
@@ -96,7 +96,7 @@ class Discretization(ManifoldModule):
     As granularity goes to :math:`\infty`, we obtain dropout without mean normalization
     """
 
-    def __init__(self, granularity=0.5, p=0.5, *, ball, dim=-1):
+    def __init__(self, granularity=0.5, p=0.5, *, ball, dim=-1, grad=False):
         super().__init__()
         assert granularity > 0
         assert 0 <= p <= 1
@@ -104,17 +104,35 @@ class Discretization(ManifoldModule):
         self.p = p
         self.ball = ball
         self.dim = dim
+        self.grad = grad
 
     def forward(self, input: torch.Tensor):
         if self.p > 0 and self.training:
             log = self.ball.logmap0(input, dim=self.dim)
-            with torch.no_grad():
-                quantized = (log * self.granularity).round_().div_(self.granularity)
-            mask = torch.empty_like(log, dtype=torch.uint8).bernoulli_(p=self.p)
-            qlog = torch.where(mask, quantized, log)
+            qlog = Quantize.apply(log, self.granularity, self.p, self.grad)
             return self.ball.expmap0(qlog, dim=self.dim)
         else:
             return input
 
     def extra_repr(self) -> str:
         return "granularity={granularity}, p={p}".format(**self.__dict__)
+
+
+class Quantize(torch.autograd.Function):
+    @staticmethod
+    def forward(ctx, input, granularity: float, p: float, grad: bool) -> torch.Tensor:
+        quantized = (input * granularity).round_().div_(granularity)
+        mask = torch.empty_like(input, dtype=torch.uint8).bernoulli_(p=p)
+        if not grad:
+            ctx.save_for_backward(mask)
+        else:
+            ctx.save_for_backward(None)
+        return torch.where(mask, quantized, input)
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        mask, = ctx.saved_tensors
+        if mask is None:
+            return grad_output, None, None, None
+        else:
+            return ~mask, None, None, None
