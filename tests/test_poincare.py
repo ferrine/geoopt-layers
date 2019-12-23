@@ -553,10 +553,10 @@ def test_noise_layer(alpha, beta, gamma):
     ball.assert_check_point_on_manifold(output)
 
 
-@pytest.mark.parametrize("granularity", [0.01, 1, 10])
-def test_noise_layer(granularity):
+@pytest.mark.parametrize("granularity,grad", itertools.product([0.01, 1, 10], [True, False]))
+def test_noise_layer(granularity, grad):
     ball = geoopt.PoincareBall()
-    noise = geoopt_layers.poincare.Discretization(granularity, ball=ball)
+    noise = geoopt_layers.poincare.Discretization(granularity, ball=ball, grad=grad)
     input = ball.random(10, 5)
     output = noise(input)
     ball.assert_check_point_on_manifold(output)
