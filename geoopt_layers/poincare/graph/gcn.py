@@ -114,7 +114,7 @@ class HyperbolicGCNConv(HyperbolicMessagePassing):
         if self.local:
             return self.propagate(edge_index, y=y, x=x, edge_weight=norm)
         else:
-            return self.propagate(edge_index, x=y, edge_weight=norm)
+            return self.propagate(edge_index, x=y, y=y, edge_weight=norm)
 
     def message(self, x_j, x_i=None):
         if self.local:
