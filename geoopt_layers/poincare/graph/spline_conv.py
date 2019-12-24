@@ -198,6 +198,7 @@ class HyperbolicSplineConv(HyperbolicMessagePassing):
             x_i, x_j, _ = args
             log_xi_x_j = self.ball.logmap(x_i, x_j)
             cos = torch.cosine_similarity(x_i, log_xi_x_j, dim=-1).mul(0.5).add(.5)
+            print(cos.min(), cos.max(), cos.mean())
             data = SplineBasis.apply(
                 torch.cat((pseudo, cos.unsqueeze(-1)), dim=-1),
                 self._buffers["kernel_size"],
