@@ -115,7 +115,7 @@ class Discretization(ManifoldModule):
             return input
 
     def extra_repr(self) -> str:
-        return "granularity={granularity}, p={p}".format(**self.__dict__)
+        return "granularity={granularity}, p={p}, grad={grad}".format(**self.__dict__)
 
 
 class Quantize(torch.autograd.Function):
