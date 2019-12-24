@@ -76,6 +76,7 @@ class HyperbolicSplineConv(HyperbolicMessagePassing):
         ball,
         ball_out=None,
         local=False,
+        local_dropout=0.0,
         aggr_method="einstein",
     ):
         if ball_out is None:
@@ -92,6 +93,7 @@ class HyperbolicSplineConv(HyperbolicMessagePassing):
         self.out_channels = out_channels
         self.dim = dim
         self.degree = degree
+        self.local_dropout = local_dropout
         if in_channels != out_channels and local and not root_weight:
             raise TypeError(
                 "Root should be specified if local within changing dimension"
@@ -201,6 +203,7 @@ class HyperbolicSplineConv(HyperbolicMessagePassing):
         if self.local:
             x_i, x_j, _ = args
             log_xi_x_j = self.ball.logmap(x_i, x_j)
+            log_xi_x_j = torch.nn.functional.dropout(log_xi_x_j, self.local_dropout)
             log_z_j = SplineWeighting.apply(log_xi_x_j, self.weight, *data)
         else:
             log_x_j, _ = args

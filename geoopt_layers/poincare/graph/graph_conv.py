@@ -22,6 +22,7 @@ class HyperbolicGraphConv(HyperbolicMessagePassing):
         ball,
         ball_out=None,
         local=False,
+        local_dropout=0.0,
         aggr_method="einstein",
     ):
         if ball_out is None:
@@ -38,6 +39,7 @@ class HyperbolicGraphConv(HyperbolicMessagePassing):
             self.__message_args__ = ["x_i", "x_j"]
         else:
             self.__message_args__ = ["h_i"]
+        self.local_dropppout = local_dropout
         self.weight_neighbors = torch.nn.Parameter(
             torch.empty(in_channels, out_channels), requires_grad=True
         )
@@ -83,6 +85,7 @@ class HyperbolicGraphConv(HyperbolicMessagePassing):
         if self.local:
             x_i, x_j = args
             h_j = self.ball.logmap(x_i, x_j)
+            x_j = torch.nn.functional.dropout(x_j, self.local_dropout)
             h_j = h_j @ self.weight_neighbors
             h_j = self.ball_out.logmap0(h_j)
         else:
