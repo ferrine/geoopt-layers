@@ -138,7 +138,7 @@ class HyperbolicSplineConv(HyperbolicMessagePassing):
         bound = 1.0 / math.sqrt(size)
         self.weight.uniform_(-bound, bound)
         if self.root is not None:
-            self.root.uniform_(-bound, bound)
+            torch.nn.init.eye_(self.root)
         if self.bias is not None:
             self.bias.zero_()
 
