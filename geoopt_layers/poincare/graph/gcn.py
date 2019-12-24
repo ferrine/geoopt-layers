@@ -16,6 +16,7 @@ class HyperbolicGCNConv(HyperbolicMessagePassing):
         ball_out=None,
         aggr_method="einstein",
         local=False,
+        local_dropout=0.,
     ):
         if ball_out is None:
             ball_out = ball
@@ -31,6 +32,7 @@ class HyperbolicGCNConv(HyperbolicMessagePassing):
         self.cached = cached
         self.normalize = normalize
         self.local = local
+        self.local_dropout = local_dropout
         if not self.local:
             # remove x_i
             self.__message_args__ = self.__message_args__[:-1]
@@ -119,6 +121,7 @@ class HyperbolicGCNConv(HyperbolicMessagePassing):
     def message(self, x_j, x_i=None):
         if self.local:
             x_j = self.ball.logmap(x_i, x_j)
+            x_j = torch.nn.functional.dropout(x_j, self.local_dropout)
             x_j = x_j @ self.weight
             return self.ball_out.expmap0(x_j)
         else:
