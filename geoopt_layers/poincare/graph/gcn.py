@@ -32,9 +32,11 @@ class HyperbolicGCNConv(HyperbolicMessagePassing):
         self.normalize = normalize
         self.local = local
         if not self.local:
-            # remove x_i, y_i
-            self.__message_args__ = self.__message_args__[:-2]
-        self.weight = torch.nn.Parameter(torch.empty(in_channels, out_channels), requires_grad=True)
+            # remove x_i
+            self.__message_args__ = self.__message_args__[:-1]
+        self.weight = torch.nn.Parameter(
+            torch.empty(in_channels, out_channels), requires_grad=True
+        )
 
         bias_shape = out_channels if bias else None
         self.register_origin(
@@ -114,15 +116,17 @@ class HyperbolicGCNConv(HyperbolicMessagePassing):
         else:
             return self.propagate(edge_index, x=y, edge_weight=norm)
 
-    def message(self, x_j, x_i=None, y_i=None):
+    def message(self, x_j, x_i=None):
         if self.local:
             x_j = self.ball.logmap(x_i, x_j)
             x_j = x_j @ self.weight
-            return self.ball_out.expmap(y_i, x_j)
+            return self.ball_out.expmap0(x_j)
         else:
             return x_j
 
-    def update(self, aggr_out):
+    def update(self, aggr_out, y):
+        if self.local:
+            aggr_out = self.ball_out.mobius_add(y, aggr_out)
         if self.bias is not None:
             aggr_out = self.ball_out.mobius_add(aggr_out, self.bias)
         return aggr_out

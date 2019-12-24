@@ -29,12 +29,16 @@ class HyperbolicMessagePassing(MessagePassing, ManifoldModule):
         node_dim=0,
     ):
         assert node_dim in {0}, "other dims are not yet supported"
-        super(HyperbolicMessagePassing, self).__init__(aggr=aggr, flow=flow, node_dim=node_dim)
+        super(HyperbolicMessagePassing, self).__init__(
+            aggr=aggr, flow=flow, node_dim=node_dim
+        )
         self.ball = ball
         self.aggr_method = aggr_method
 
     def propagate(self, edge_index, size=None, edge_weight=None, **kwargs):
-        return super().propagate(edge_index, size=size, edge_weight=edge_weight, **kwargs)
+        return super().propagate(
+            edge_index, size=size, edge_weight=edge_weight, **kwargs
+        )
 
     def aggregate(self, out, index, dim=0, dim_size=None, edge_weight=None):
         out = poincare_mean_scatter(

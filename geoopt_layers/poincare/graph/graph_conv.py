@@ -1,5 +1,5 @@
 from .message_passing import HyperbolicMessagePassing
-from ..linear import MobiusLinear
+import torch
 
 
 class HyperbolicGraphConv(HyperbolicMessagePassing):
@@ -16,12 +16,12 @@ class HyperbolicGraphConv(HyperbolicMessagePassing):
         self,
         in_channels,
         out_channels,
-        aggr="add",
+        aggr="sum",
         bias=True,
         *,
         ball,
         ball_out=None,
-        learn_origin=False,
+        local=False,
         aggr_method="einstein",
     ):
         if ball_out is None:
@@ -33,42 +33,69 @@ class HyperbolicGraphConv(HyperbolicMessagePassing):
         self.ball_out = ball_out
         self.in_channels = in_channels
         self.out_channels = out_channels
-
-        self.lin_neighbors = MobiusLinear(
-            in_channels,
-            out_channels,
-            bias=False,
-            ball=self.ball_in,
-            ball_out=self.ball_out,
-            learn_origin=learn_origin,
+        self.local = local
+        if self.local:
+            self.__message_args__ = ["x_i", "x_j"]
+        else:
+            self.__message_args__ = ["h_i"]
+        self.weight_neighbors = torch.nn.Parameter(
+            torch.empty(in_channels, out_channels), requires_grad=True
         )
-        self.lin_loop = MobiusLinear(
-            in_channels,
-            out_channels,
-            bias=bias,
-            ball=self.ball_in,
-            ball_out=self.ball_out,
-            learn_origin=learn_origin,
+        self.weight_loop = torch.nn.Parameter(
+            torch.empty(in_channels, out_channels), requires_grad=True
+        )
+        bias_shape = out_channels if bias else None
+        self.register_origin(
+            "bias",
+            self.ball_out,
+            origin_shape=bias_shape,
+            parameter=True,
+            allow_none=True,
         )
 
         self.reset_parameters()
 
+    @torch.no_grad()
     def reset_parameters(self):
-        self.lin_loop.reset_parameters()
-        self.lin_neighbors.reset_parameters()
+        torch.nn.init.xavier_uniform_(self.weight_loop)
+        torch.nn.init.xavier_uniform_(self.weight_neighbors)
+        if self.bias is not None:
+            self.bias.zero_()
 
     def forward(self, x, edge_index, edge_weight=None, size=None):
         """"""
-        h = self.lin_neighbors(x)
-        return self.propagate(edge_index, size=size, x=x, h=h, edge_weight=edge_weight)
+        y = self.ball.logmap0(x)
+        y = y @ self.weight_loop
+        y = self.ball_out.expmap0(y)
+        if self.local:
+            return self.propagate(
+                edge_index, size=size, y=y, x=x, edge_weight=edge_weight
+            )
+        else:
+            h = self.ball.logmap0(x)
+            h = h @ self.weight_neighbors
+            h = self.ball_out.expmap0(h)
+            return self.propagate(
+                edge_index, size=size, y=y, x=x, h=h, edge_weight=edge_weight
+            )
 
-    def message(self, h_j, edge_weight):
+    def message(self, *args):
+        if self.local:
+            x_i, x_j = args
+            h_j = self.ball.logmap(x_i, x_j)
+            h_j = h_j @ self.weight_neighbors
+            h_j = self.ball_out.logmap0(h_j)
+        else:
+            h_j, = args
         return h_j
 
-    def update(self, aggr_out, x):
-        return self.ball.mobius_add(aggr_out, self.lin_loop(x))
+    def update(self, aggr_out, y):
+        aggr_out = self.ball_out.mobius_add(y, aggr_out)
+        if self.bias is not None:
+            aggr_out = self.ball_out.mobius_add(aggr_out, self.bias)
+        return aggr_out
 
-    def __repr__(self):
-        return "{}({}, {})".format(
-            self.__class__.__name__, self.in_channels, self.out_channels
+    def extra_repr(self) -> str:
+        return "{} -> {}, local={local}, aggr={aggr}, aggr_method={aggr_method}".format(
+            self.in_channels, self.out_channels, **self.__dict__
         )

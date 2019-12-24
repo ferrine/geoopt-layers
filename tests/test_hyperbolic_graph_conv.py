@@ -6,7 +6,7 @@ from geoopt_layers.poincare.graph.graph_conv import HyperbolicGraphConv
 
 
 @pytest.mark.parametrize(
-    "aggr,aggr_method,bias,learn_origin,sizes,weighted",
+    "aggr,aggr_method,bias,local,sizes,weighted",
     itertools.product(
         ["mean", "sum"],
         ["einstein", "tangent"],
@@ -16,7 +16,7 @@ from geoopt_layers.poincare.graph.graph_conv import HyperbolicGraphConv
         [True, False],
     ),
 )
-def test_graph_conv(aggr, aggr_method, bias, learn_origin, sizes, weighted):
+def test_graph_conv(aggr, aggr_method, bias, local, sizes, weighted):
     ball = geoopt.PoincareBallExact()
     ball_out = geoopt.PoincareBallExact(c=0.1)
     edge_index = torch.tensor([[0, 0, 0, 1, 1, 1], [0, 1, 2, 0, 1, 2]])
@@ -30,7 +30,7 @@ def test_graph_conv(aggr, aggr_method, bias, learn_origin, sizes, weighted):
         aggr=aggr,
         aggr_method=aggr_method,
         bias=bias,
-        learn_origin=learn_origin,
+        local=local,
         ball=ball,
         ball_out=ball_out
     )(x, edge_index, size=(3, 3), edge_weight=edge_weight)

@@ -73,7 +73,9 @@ class Noise(ManifoldModule):
             return input
 
     def extra_repr(self) -> str:
-        return "alpha={alpha}, beta={beta}, gamma={gamma}, grad={grad}, backwards={backwards}".format(**self.__dict__)
+        return "alpha={alpha}, beta={beta}, gamma={gamma}, grad={grad}, backwards={backwards}".format(
+            **self.__dict__
+        )
 
 
 class Discretization(ManifoldModule):
