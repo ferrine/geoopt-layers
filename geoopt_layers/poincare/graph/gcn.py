@@ -1,6 +1,5 @@
 import torch.nn
 from .message_passing import HyperbolicMessagePassing
-from ..linear import MobiusLinear
 
 
 class HyperbolicGCNConv(HyperbolicMessagePassing):
@@ -15,8 +14,8 @@ class HyperbolicGCNConv(HyperbolicMessagePassing):
         *,
         ball,
         ball_out=None,
-        learn_origin=False,
         aggr_method="einstein",
+        local=False,
     ):
         if ball_out is None:
             ball_out = ball
@@ -31,15 +30,12 @@ class HyperbolicGCNConv(HyperbolicMessagePassing):
         self.improved = improved
         self.cached = cached
         self.normalize = normalize
+        self.local = local
+        if not self.local:
+            # remove x_i, y_i
+            self.__message_args__ = self.__message_args__[:-2]
+        self.weight = torch.nn.Parameter(torch.empty(in_channels, out_channels), requires_grad=True)
 
-        self.lin = MobiusLinear(
-            in_channels,
-            out_channels,
-            bias=False,
-            ball=self.ball_in,
-            ball_out=self.ball_out,
-            learn_origin=learn_origin,
-        )
         bias_shape = out_channels if bias else None
         self.register_origin(
             "bias",
@@ -54,7 +50,7 @@ class HyperbolicGCNConv(HyperbolicMessagePassing):
 
     @torch.no_grad()
     def reset_parameters(self):
-        self.lin.reset_parameters()
+        torch.nn.init.xavier_uniform_(self.weight)
         self.cached_result = None
         self.cached_num_edges = None
         if self.bias is not None:
@@ -84,8 +80,6 @@ class HyperbolicGCNConv(HyperbolicMessagePassing):
 
     def forward(self, x, edge_index, edge_weight=None):
         """"""
-        x = self.lin(x)
-
         if self.cached and self.cached_result is not None:
             if edge_index.size(1) != self.cached_num_edges:
                 raise RuntimeError(
@@ -111,15 +105,29 @@ class HyperbolicGCNConv(HyperbolicMessagePassing):
             self.cached_result = edge_index, norm
 
         edge_index, norm = self.cached_result
-        # slightly modified for re-weightning
-        return self.propagate(edge_index, x=x, edge_weight=norm)
+
+        y = self.ball.logmap0(x)
+        y = y @ self.weight
+        y = self.ball_out.expmap0(y)
+        if self.local:
+            return self.propagate(edge_index, y=y, x=x, edge_weight=norm)
+        else:
+            return self.propagate(edge_index, x=y, edge_weight=norm)
+
+    def message(self, x_j, x_i=None, y_i=None):
+        if self.local:
+            x_j = self.ball.logmap(x_i, x_j)
+            x_j = x_j @ self.weight
+            return self.ball_out.expmap(y_i, x_j)
+        else:
+            return x_j
 
     def update(self, aggr_out):
         if self.bias is not None:
             aggr_out = self.ball_out.mobius_add(aggr_out, self.bias)
         return aggr_out
 
-    def __repr__(self):
-        return "{}({}, {})".format(
-            self.__class__.__name__, self.in_channels, self.out_channels
+    def extra_repr(self) -> str:
+        return "{} -> {}, local={local}, aggr={aggr}, aggr_method={aggr_method}".format(
+            self.in_channels, self.out_channels, **self.__dict__
         )
