@@ -20,7 +20,7 @@ from geoopt_layers.poincare.graph import HyperbolicSplineConv
 def test_spline_conv(bias, sizes, kernel_size, degree, root_weight, dim, local):
     ball = geoopt.PoincareBallExact()
     ball_out = geoopt.PoincareBallExact(c=0.1)
-    edge_index = torch.tensor([[0, 0, 0, 1, 2, 3], [1, 2, 3, 0, 0, 0]])
+    edge_index = torch.tensor([[0, 0, 0, 1, 2, 3, 0], [1, 2, 3, 0, 0, 0, 0]])
     x = ball.random(4, 5)
     pseudo = torch.rand(edge_index.size(1), dim)
     should_pass = not (sizes[0] != sizes[1] and local and not root_weight)
@@ -38,6 +38,7 @@ def test_spline_conv(bias, sizes, kernel_size, degree, root_weight, dim, local):
         )(x, edge_index, pseudo=pseudo)
         assert out.shape == (4, sizes[-1])
         ball_out.assert_check_point_on_manifold(out)
+        out.sum().backward()
     else:
         with pytest.raises(TypeError) as e:
             HyperbolicSplineConv(
