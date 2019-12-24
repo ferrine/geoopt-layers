@@ -35,11 +35,6 @@ class HyperbolicMessagePassing(MessagePassing, ManifoldModule):
         self.ball = ball
         self.aggr_method = aggr_method
 
-    def propagate(self, edge_index, size=None, edge_weight=None, **kwargs):
-        return super().propagate(
-            edge_index, size=size, edge_weight=edge_weight, **kwargs
-        )
-
     def aggregate(self, out, index, dim=0, dim_size=None, edge_weight=None):
         out = poincare_mean_scatter(
             out,
