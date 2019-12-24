@@ -103,10 +103,10 @@ class HyperbolicSplineConv(HyperbolicMessagePassing):
             self.__message_args__ = ["x_i", "x_j", "pseudo"]
         else:
             self.__message_args__ = ["log_x_j", "pseudo"]
-        kernel_size = torch.tensor(repeat(kernel_size, dim), dtype=torch.long)
+        kernel_size = torch.tensor(repeat(kernel_size, dim + local), dtype=torch.long)
         self.register_buffer("kernel_size", kernel_size)
 
-        is_open_spline = repeat(is_open_spline, dim)
+        is_open_spline = repeat(is_open_spline, dim + local)
         is_open_spline = torch.tensor(is_open_spline, dtype=torch.uint8)
         self.register_buffer("is_open_spline", is_open_spline)
 
@@ -194,18 +194,24 @@ class HyperbolicSplineConv(HyperbolicMessagePassing):
 
     def message(self, *args):
         pseudo = args[-1]
-        data = SplineBasis.apply(
-            pseudo,
-            self._buffers["kernel_size"],
-            self._buffers["is_open_spline"],
-            self.degree,
-        )
         if self.local:
             x_i, x_j, _ = args
             log_xi_x_j = self.ball.logmap(x_i, x_j)
+            data = SplineBasis.apply(
+                torch.cat((pseudo, torch.cosine_similarity(x_i, log_xi_x_j, dim=-1))),
+                self._buffers["kernel_size"],
+                self._buffers["is_open_spline"],
+                self.degree,
+            )
             log_xi_x_j = torch.nn.functional.dropout(log_xi_x_j, self.local_dropout)
             log_z_j = SplineWeighting.apply(log_xi_x_j, self.weight, *data)
         else:
+            data = SplineBasis.apply(
+                pseudo,
+                self._buffers["kernel_size"],
+                self._buffers["is_open_spline"],
+                self.degree,
+            )
             log_x_j, _ = args
             log_z_j = SplineWeighting.apply(log_x_j, self.weight, *data)
         return self.ball_out.expmap0(log_z_j)
