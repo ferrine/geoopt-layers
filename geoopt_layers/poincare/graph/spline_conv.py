@@ -2,6 +2,7 @@ import warnings
 import math
 import torch
 from torch.nn import Parameter
+import torch_geometric
 from .message_passing import HyperbolicMessagePassing
 from ...utils import repeat
 
@@ -74,6 +75,7 @@ class HyperbolicSplineConv(HyperbolicMessagePassing):
         *,
         ball,
         ball_out=None,
+        local=False,
         aggr_method="einstein",
     ):
         if ball_out is None:
@@ -90,7 +92,15 @@ class HyperbolicSplineConv(HyperbolicMessagePassing):
         self.out_channels = out_channels
         self.dim = dim
         self.degree = degree
-
+        if in_channels != out_channels and local and not root_weight:
+            raise TypeError(
+                "Root should be specified if local within changing dimension"
+            )
+        self.local = local
+        if self.local:
+            self.__message_args__ = ["x_i", "x_j", "pseudo"]
+        else:
+            self.__message_args__ = ["log_x_j", "pseudo"]
         kernel_size = torch.tensor(repeat(kernel_size, dim), dtype=torch.long)
         self.register_buffer("kernel_size", kernel_size)
 
@@ -102,7 +112,6 @@ class HyperbolicSplineConv(HyperbolicMessagePassing):
         self.weight = Parameter(
             torch.empty(K, in_channels, out_channels), requires_grad=True
         )
-
         if root_weight:
             self.root = Parameter(
                 torch.empty(in_channels, out_channels), requires_grad=True
@@ -133,10 +142,6 @@ class HyperbolicSplineConv(HyperbolicMessagePassing):
 
     def forward(self, x, edge_index, pseudo, edge_weight=None):
         """"""
-        try:
-            import torch_geometric
-        except ImportError:  # for debug mode only
-            torch_geometric = None
         x = x.unsqueeze(-1) if x.dim() == 1 else x
         pseudo = pseudo.unsqueeze(-1) if pseudo.dim() == 1 else pseudo
 
@@ -147,7 +152,7 @@ class HyperbolicSplineConv(HyperbolicMessagePassing):
                 "your data to the GPU."
             )
 
-        if torch_geometric is not None and torch_geometric.is_debug_enabled():
+        if torch_geometric.is_debug_enabled():
             if x.size(1) != self.in_channels:
                 raise RuntimeError(
                     "Expected {} node features, but found {}".format(
@@ -180,28 +185,39 @@ class HyperbolicSplineConv(HyperbolicMessagePassing):
                         " but found them in the interval [{}, {}]"
                     ).format(min_pseudo, max_pseudo)
                 )
-        x = self.ball_in.logmap0(x)
-        return self.propagate(edge_index, x=x, pseudo=pseudo, edge_weight=edge_weight)
+        log_x = self.ball_in.logmap0(x)
+        return self.propagate(
+            edge_index, x=x, log_x=log_x, pseudo=pseudo, edge_weight=edge_weight
+        )
 
-    def message(self, x_j, pseudo):
+    def message(self, *args):
+        pseudo = args[-1]
         data = SplineBasis.apply(
             pseudo,
             self._buffers["kernel_size"],
             self._buffers["is_open_spline"],
             self.degree,
         )
-        z_j = SplineWeighting.apply(x_j, self.weight, *data)
-        return self.ball_out.expmap0(z_j)
+        if self.local:
+            x_i, x_j, _ = args
+            log_xi_x_j = self.ball.logmap(x_i, x_j)
+            log_z_j = SplineWeighting.apply(log_xi_x_j, self.weight, *data)
+        else:
+            log_x_j, _ = args
+            log_z_j = SplineWeighting.apply(log_x_j, self.weight, *data)
+        return self.ball_out.expmap0(log_z_j)
 
-    def update(self, aggr_out, x):
+    def update(self, aggr_out, log_x, x):
         if self.root is not None:
-            z = self.ball_out.expmap0(torch.mm(x, self.root))
+            z = self.ball_out.expmap0(log_x @ self.root)
             aggr_out = self.ball_out.mobius_add(z, aggr_out)
+        elif self.local:
+            aggr_out = self.ball_out.mobius_add(x, aggr_out)
         if self.bias is not None:
             aggr_out = self.ball_out.mobius_add(aggr_out, self.bias)
         return aggr_out
 
-    def __repr__(self):
-        return "{}({}, {}, dim={})".format(
-            self.__class__.__name__, self.in_channels, self.out_channels, self.dim
+    def extra_repr(self) -> str:
+        return "{} -> {}, dim={dim}, local={local}, aggr={aggr}, aggr_method={aggr_method}".format(
+            self.in_channels, self.out_channels, **self.__dict__
         )
