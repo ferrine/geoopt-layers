@@ -5,7 +5,7 @@ from torch.nn import Parameter
 import torch_geometric
 from .message_passing import HyperbolicMessagePassing
 from ...utils import repeat
-
+import inspect
 
 try:
     from torch_spline_conv import SplineBasis, SplineWeighting
@@ -76,7 +76,6 @@ class HyperbolicSplineConv(HyperbolicMessagePassing):
         ball,
         ball_out=None,
         local=False,
-        local_dropout=0.0,
         aggr_method="einstein",
     ):
         if ball_out is None:
@@ -93,16 +92,32 @@ class HyperbolicSplineConv(HyperbolicMessagePassing):
         self.out_channels = out_channels
         self.dim = dim
         self.degree = degree
-        self.local_dropout = local_dropout
         if in_channels != out_channels and local and not root_weight:
             raise TypeError(
                 "Root should be specified if local within changing dimension"
             )
         self.local = local
         if self.local:
-            self.__message_args__ = ["x_i", "x_j", "pseudo"]
+            self.__message_signature__ = inspect.Signature(
+                [
+                    inspect.Parameter("x_i", inspect.Parameter.POSITIONAL_OR_KEYWORD),
+                    inspect.Parameter("x_j", inspect.Parameter.POSITIONAL_OR_KEYWORD),
+                    inspect.Parameter(
+                        "pseudo", inspect.Parameter.POSITIONAL_OR_KEYWORD
+                    ),
+                ]
+            )  # ["x_i", "x_j", "pseudo"]
         else:
-            self.__message_args__ = ["log_x_j", "pseudo"]
+            self.__message_signature__ = inspect.Signature(
+                [
+                    inspect.Parameter(
+                        "log_x_j", inspect.Parameter.POSITIONAL_OR_KEYWORD
+                    ),
+                    inspect.Parameter(
+                        "pseudo", inspect.Parameter.POSITIONAL_OR_KEYWORD
+                    ),
+                ]
+            )  # ["log_x_j", "pseudo"]
         kernel_size = torch.tensor(repeat(kernel_size, dim + local), dtype=torch.long)
         self.register_buffer("kernel_size", kernel_size)
 
@@ -192,21 +207,15 @@ class HyperbolicSplineConv(HyperbolicMessagePassing):
             edge_index, x=x, log_x=log_x, pseudo=pseudo, edge_weight=edge_weight
         )
 
-    def message(self, *args):
-        pseudo = args[-1]
+    def message(self, x_i=None, x_j=None, log_x_j=None, pseudo=None):
         if self.local:
-            x_i, x_j, _ = args
             log_xi_x_j = self.ball.logmap(x_i, x_j)
-            cos = torch.cosine_similarity(
-                x_i.detach(), log_xi_x_j.detach(),
-                dim=-1, eps=1e-8) * .5 + 0.5
             data = SplineBasis.apply(
-                torch.cat((pseudo, cos.unsqueeze(-1)), dim=-1),
+                pseudo,
                 self._buffers["kernel_size"],
                 self._buffers["is_open_spline"],
                 self.degree,
             )
-            log_xi_x_j = torch.nn.functional.dropout(log_xi_x_j, self.local_dropout)
             log_z_j = SplineWeighting.apply(log_xi_x_j, self.weight, *data)
         else:
             data = SplineBasis.apply(
@@ -215,7 +224,6 @@ class HyperbolicSplineConv(HyperbolicMessagePassing):
                 self._buffers["is_open_spline"],
                 self.degree,
             )
-            log_x_j, _ = args
             log_z_j = SplineWeighting.apply(log_x_j, self.weight, *data)
         return self.ball_out.expmap0(log_z_j)
 

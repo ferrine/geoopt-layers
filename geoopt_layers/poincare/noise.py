@@ -133,7 +133,7 @@ class Quantize(torch.autograd.Function):
 
     @staticmethod
     def backward(ctx, grad_output):
-        mask, = ctx.saved_tensors
+        (mask,) = ctx.saved_tensors
         if mask is None:
             return grad_output, None, None, None
         else:

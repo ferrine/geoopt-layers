@@ -1,5 +1,6 @@
 from .message_passing import HyperbolicMessagePassing
 import torch
+import inspect
 
 
 class HyperbolicGraphConv(HyperbolicMessagePassing):
@@ -36,9 +37,16 @@ class HyperbolicGraphConv(HyperbolicMessagePassing):
         self.out_channels = out_channels
         self.local = local
         if self.local:
-            self.__message_args__ = ["x_i", "x_j"]
+            self.__message_signature__ = inspect.Signature(
+                [
+                    inspect.Parameter("x_i", inspect.Parameter.POSITIONAL_OR_KEYWORD),
+                    inspect.Parameter("x_j", inspect.Parameter.POSITIONAL_OR_KEYWORD),
+                ]
+            )  # ["x_i", "x_j"]
         else:
-            self.__message_args__ = ["h_i"]
+            self.__message_signature__ = inspect.Signature(
+                [inspect.Parameter("h_j", inspect.Parameter.POSITIONAL_OR_KEYWORD)]
+            )  # ["h_j"]
         self.local_dropppout = local_dropout
         self.weight_neighbors = torch.nn.Parameter(
             torch.empty(in_channels, out_channels), requires_grad=True
@@ -81,16 +89,13 @@ class HyperbolicGraphConv(HyperbolicMessagePassing):
                 edge_index, size=size, y=y, x=x, h=h, edge_weight=edge_weight
             )
 
-    def message(self, *args):
+    def message(self, x_i=None, x_j=None, h_j=None):
         if self.local:
-            x_i, x_j = args
             h_j = self.ball.logmap(x_i, x_j)
-            x_j = torch.nn.functional.dropout(x_j, self.local_dropout)
             h_j = h_j @ self.weight_neighbors
-            h_j = self.ball_out.logmap0(h_j)
+            return self.ball_out.expmap0(h_j)
         else:
-            h_j, = args
-        return h_j
+            return h_j
 
     def update(self, aggr_out, y):
         aggr_out = self.ball_out.mobius_add(y, aggr_out)
