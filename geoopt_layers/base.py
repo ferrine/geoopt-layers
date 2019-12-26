@@ -7,15 +7,17 @@ def create_origin(
     origin: geoopt.ManifoldTensor = None,
     origin_shape=None,
     parameter=False,
-    allow_none=False,
+    none=False,
 ):
-    if origin is not None:
+    if none:
+        return None
+    elif origin is not None:
         pass
-    elif origin_shape is None and not allow_none:
+    elif origin_shape is None:
         raise ValueError(
             "`origin_shape` is the required parameter if origin is not provided"
         )
-    elif origin_shape is None and allow_none:
+    elif origin_shape is None:
         return None
     else:
         origin = manifold.origin(origin_shape)
@@ -32,7 +34,7 @@ class ManifoldModule(torch.nn.Module):
         origin: geoopt.ManifoldTensor = None,
         origin_shape=None,
         parameter=False,
-        allow_none=False,
+        none=False,
     ):
         if manifold not in set(self.children()):
             raise ValueError(
@@ -43,7 +45,7 @@ class ManifoldModule(torch.nn.Module):
             origin=origin,
             origin_shape=origin_shape,
             parameter=parameter,
-            allow_none=allow_none,
+            none=none,
         )
         if isinstance(origin, torch.nn.Parameter):
             self.register_parameter(name, origin)

@@ -107,18 +107,14 @@ class WeightedPoincareCentroids(ManifoldModule):
         self.centroids = geoopt.ManifoldParameter(
             torch.empty((num_centroids,) + centroid_shape), manifold=ball
         )
-        if method == "tangent":
-            origin_shape = centroid_shape
-        else:
-            origin_shape = None
+        self.learn_origin = learn_origin and method == "tangent"
         self.register_origin(
             "origin",
             self.manifold,
-            origin_shape=origin_shape,
-            allow_none=True,
+            origin_shape=centroid_shape,
+            none=not self.learn_origin,
             parameter=learn_origin,
         )
-        self.learn_origin = learn_origin and method == "tangent"
         self.zero = zero
         if zero:
             self.register_forward_pre_hook(keep_zero)

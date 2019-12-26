@@ -136,13 +136,12 @@ class HyperbolicSplineConv(HyperbolicMessagePassing):
         else:
             self.register_parameter("root", None)
 
-        bias_shape = out_channels if bias else None
         self.register_origin(
             "bias",
             self.ball_out,
-            origin_shape=bias_shape,
+            origin_shape=out_channels,
             parameter=True,
-            allow_none=True,
+            none=not bias,
         )
 
         self.reset_parameters()

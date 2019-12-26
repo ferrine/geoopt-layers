@@ -41,13 +41,12 @@ class HyperbolicGCNConv(HyperbolicMessagePassing):
             torch.empty(in_channels, out_channels), requires_grad=True
         )
 
-        bias_shape = out_channels if bias else None
         self.register_origin(
             "bias",
             self.ball_out,
-            origin_shape=bias_shape,
+            origin_shape=out_channels,
             parameter=True,
-            allow_none=True,
+            none=not bias,
         )
         self.cached_result = None
         self.cached_num_edges = None
