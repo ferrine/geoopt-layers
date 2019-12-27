@@ -1,12 +1,17 @@
 import torch
-import geoopt
 import numpy as np
 import geoopt_layers
 from geoopt_layers.poincare.graph.message_passing import HyperbolicMessagePassing
+import pytest
 
 
-def test_message_passing():
-    ball = geoopt.PoincareBallExact()
+@pytest.fixture(params=[True, False])
+def disable(request):
+    return request.param
+
+
+def test_message_passing(disable):
+    ball = geoopt_layers.poincare.PoincareBallExact(disable=disable)
     edge_index = torch.tensor([[0, 0, 0, 1, 1, 1], [0, 1, 2, 0, 1, 2]])
 
     # x = torch.Tensor([[1], [2]])

@@ -1,8 +1,18 @@
 import itertools
 import torch
 import pytest
-import geoopt
+from geoopt_layers.poincare import PoincareBallExact
 from geoopt_layers.poincare.graph import HyperbolicSplineConv
+
+
+@pytest.fixture(params=[True, False])
+def disable1(request):
+    return request.param
+
+
+@pytest.fixture(params=[True, False])
+def disable2(request):
+    return request.param
 
 
 @pytest.mark.parametrize(
@@ -17,9 +27,11 @@ from geoopt_layers.poincare.graph import HyperbolicSplineConv
         [True, False],  # local
     ),
 )
-def test_spline_conv(bias, sizes, kernel_size, degree, root_weight, dim, local):
-    ball = geoopt.PoincareBallExact()
-    ball_out = geoopt.PoincareBallExact(c=0.1)
+def test_spline_conv(
+    bias, sizes, kernel_size, degree, root_weight, dim, local, disable1, disable2
+):
+    ball = PoincareBallExact(disable=disable1)
+    ball_out = PoincareBallExact(c=0.1, disable=disable2)
     edge_index = torch.tensor([[0, 0, 0, 1, 2, 3, 0], [1, 2, 3, 0, 0, 0, 0]])
     x = ball.random(4, 5)
     pseudo = torch.rand(edge_index.size(1), dim)

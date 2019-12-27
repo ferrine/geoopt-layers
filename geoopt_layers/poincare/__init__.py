@@ -34,3 +34,4 @@ from . import graph
 from .graph import HyperbolicMessagePassing, HyperbolicGraphConv, HyperbolicGCNConv
 from . import noise
 from .noise import Noise, Discretization
+from .manifold import PoincareBall, PoincareBallExact

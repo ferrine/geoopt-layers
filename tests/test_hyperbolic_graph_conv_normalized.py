@@ -1,8 +1,18 @@
 import itertools
 import torch
 import pytest
-import geoopt
+from geoopt_layers.poincare import PoincareBallExact
 from geoopt_layers.poincare.graph import HyperbolicGCNConv
+
+
+@pytest.fixture(params=[True, False])
+def disable1(request):
+    return request.param
+
+
+@pytest.fixture(params=[True, False])
+def disable2(request):
+    return request.param
 
 
 @pytest.mark.parametrize(
@@ -15,9 +25,9 @@ from geoopt_layers.poincare.graph import HyperbolicGCNConv
         [True, False],
     ),
 )
-def test_graph_conv(aggr_method, bias, sizes, weighted, local):
-    ball = geoopt.PoincareBallExact()
-    ball_out = geoopt.PoincareBallExact(c=0.1)
+def test_graph_conv(aggr_method, bias, sizes, weighted, local, disable1, disable2):
+    ball = PoincareBallExact(disable=disable1)
+    ball_out = PoincareBallExact(c=0.1, disable=disable2)
     edge_index = torch.tensor([[0, 0, 0, 1, 1, 1], [0, 1, 2, 0, 1, 2]])
     if weighted:
         edge_weight = torch.rand(edge_index.size(1))
