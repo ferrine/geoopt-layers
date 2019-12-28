@@ -1,8 +1,10 @@
 import geoopt
 import torch
+import functools
 
 
-def method(name, alternative=None):
+def method(cls, name, alternative=None):
+    @functools.wraps(getattr(cls, name))
     def impl(self, *args, **kwargs):
         if self.disabled and alternative is None:
             return getattr(geoopt.Euclidean, name)(self, *args, **kwargs)
@@ -10,7 +12,6 @@ def method(name, alternative=None):
             return alternative(self, *args, **kwargs)
         else:
             return getattr(self.__base__, name)(self, *args, **kwargs)
-
     return impl
 
 
@@ -26,22 +27,22 @@ class PoincareBall(geoopt.PoincareBall):
         self.ndim = 1
         self.disabled = disable
 
-    _check_point_on_manifold = method("_check_point_on_manifold")
-    _check_vector_on_tangent = method("_check_vector_on_tangent")
-    dist = method(
+    _check_point_on_manifold = method(__base__, "_check_point_on_manifold")
+    _check_vector_on_tangent = method(__base__, "_check_vector_on_tangent")
+    dist = method(__base__, 
         "dist",
         lambda s, x, y, *, keepdim=False, dim=-1: (x - y).norm(
             dim=dim, keepdim=keepdim
         ),
     )
-    dist2 = method(
+    dist2 = method(__base__, 
         "dist2",
         lambda s, x, y, *, keepdim=False, dim=-1: (x - y).sum(dim=dim, keepdim=keepdim),
     )
-    egrad2rgrad = method("egrad2rgrad", lambda s, x, u, *, dim=-1: u)
-    retr = method("retr", lambda s, x, u, *, dim=-1: x + u)
-    projx = method("projx", lambda s, x, *, dim=-1: x)
-    proju = method("proju", lambda s, x, u, *, dim=-1: x + u)
+    egrad2rgrad = method(__base__, "egrad2rgrad", lambda s, x, u, *, dim=-1: u)
+    retr = method(__base__, "retr", lambda s, x, u, *, dim=-1: x + u)
+    projx = method(__base__, "projx", lambda s, x, *, dim=-1: x)
+    proju = method(__base__, "proju", lambda s, x, u, *, dim=-1: x + u)
 
     def __inner(
         self,
@@ -58,7 +59,7 @@ class PoincareBall(geoopt.PoincareBall):
             inner = (u * v).sum(dim=dim, keepdim=keepdim)
         return inner
 
-    inner = method("inner", __inner)
+    inner = method(__base__, "inner", __inner)
 
     def __norm(
         self, x: torch.Tensor, u: torch.Tensor, *, keepdim=False, dim=-1
@@ -66,39 +67,39 @@ class PoincareBall(geoopt.PoincareBall):
         norm = u.norm(dim=dim, keepdim=keepdim)
         return norm
 
-    norm = method("norm", __norm)
-    expmap = method("expmap", lambda s, x, u, *, dim=-1: x + u)
-    logmap = method("logmap", lambda s, x, y, *, dim=-1: y - x)
-    transp = method("transp", lambda s, x, y, v, *, dim=-1: v)
-    transp_follow_retr = method("transp_follow_retr", lambda s, x, u, v, *, dim=-1: v)
-    transp_follow_expmap = method(
+    norm = method(__base__, "norm", __norm)
+    expmap = method(__base__, "expmap", lambda s, x, u, *, dim=-1: x + u)
+    logmap = method(__base__, "logmap", lambda s, x, y, *, dim=-1: y - x)
+    transp = method(__base__, "transp", lambda s, x, y, v, *, dim=-1: v)
+    transp_follow_retr = method(__base__, "transp_follow_retr", lambda s, x, u, v, *, dim=-1: v)
+    transp_follow_expmap = method(__base__, 
         "transp_follow_expmap", lambda s, x, u, v, *, dim=-1: v
     )
-    expmap_transp = method("expmap_transp", lambda s, x, u, v, *, dim=-1: (x + u, v))
-    retr_transp = method("retr_transp", lambda s, x, u, v, *, dim=-1: (x + u, v))
+    expmap_transp = method(__base__, "expmap_transp", lambda s, x, u, v, *, dim=-1: (x + u, v))
+    retr_transp = method(__base__, "retr_transp", lambda s, x, u, v, *, dim=-1: (x + u, v))
 
     # need alternative
-    mobius_add = method("mobius_add", lambda s, x, y, *, dim=-1, project=True: x + y)
-    mobius_sub = method("mobius_sub", lambda s, x, y, *, dim=-1, project=True: x - y)
-    mobius_coadd = method(
+    mobius_add = method(__base__, "mobius_add", lambda s, x, y, *, dim=-1, project=True: x + y)
+    mobius_sub = method(__base__, "mobius_sub", lambda s, x, y, *, dim=-1, project=True: x - y)
+    mobius_coadd = method(__base__, 
         "mobius_coadd", lambda s, x, y, *, dim=-1, project=True: x + y
     )
-    mobius_cosub = method(
+    mobius_cosub = method(__base__, 
         "mobius_cosub", lambda s, x, y, *, dim=-1, project=True: x - y
     )
-    mobius_scalar_mul = method(
+    mobius_scalar_mul = method(__base__, 
         "mobius_scalar_mul", lambda s, r, x, *, dim=-1, project=True: r * x
     )
-    mobius_pointwise_mul = method(
+    mobius_pointwise_mul = method(__base__, 
         "mobius_pointwise_mul", lambda s, w, x, *, dim=-1, project=True: w * x
     )
-    mobius_matvec = method(
+    mobius_matvec = method(__base__, 
         "mobius_matvec",
         lambda s, m, x, *, dim=-1, project=True: torch.tensordot(
             x, m, dims=([dim], [1])
         ),
     )
-    geodesic = method(
+    geodesic = method(__base__, 
         "geodesic", lambda s, t, x, y, *, dim=-1, project=True: torch.lerp(x, y, t)
     )
 
@@ -106,19 +107,19 @@ class PoincareBall(geoopt.PoincareBall):
         u = u / u.norm(dim=dim, keepdim=True).clamp_min(1e-5)
         return x + u * t
 
-    geodesic_unit = method("geodesic_unit", __geodesic_unit)
-    lambda_x = method(
+    geodesic_unit = method(__base__, "geodesic_unit", __geodesic_unit)
+    lambda_x = method(__base__, 
         "lambda_x",
         lambda s, x, *, keepdim=False, dim=-1: torch.full_like(x.narrow(dim, 0, 1), 2),
     )
-    dist0 = method(
+    dist0 = method(__base__, 
         "dist0", lambda s, x, *, dim=-1, keepdim=True: x.norm(dim=dim, keepdim=keepdim)
     )
-    expmap0 = method("expmap0", lambda s, u, *, dim=-1, project=True: u)
-    logmap0 = method("logmap0", lambda s, x, *, dim=-1: x)
-    transp0 = method("transp0", lambda s, y, u, *, dim=-1: u)
-    transp0back = method("transp0back", lambda s, y, u, *, dim=-1: u)
-    gyration = method("gyration", lambda s, x, y, z, *, dim=-1: z)
+    expmap0 = method(__base__, "expmap0", lambda s, u, *, dim=-1, project=True: u)
+    logmap0 = method(__base__, "logmap0", lambda s, x, *, dim=-1: x)
+    transp0 = method(__base__, "transp0", lambda s, y, u, *, dim=-1: u)
+    transp0back = method(__base__, "transp0back", lambda s, y, u, *, dim=-1: u)
+    gyration = method(__base__, "gyration", lambda s, x, y, z, *, dim=-1: z)
 
     def __dist2plane(
         self,
@@ -137,10 +138,10 @@ class PoincareBall(geoopt.PoincareBall):
         else:
             return dist.abs()
 
-    dist2plane = method("dist2plane", __dist2plane)
-    mobius_fn_apply = method("mobius_fn_apply", NotImplemented)
-    mobius_fn_apply_chain = method("mobius_fn_apply_chain", NotImplemented)
-    random_normal = method(
+    dist2plane = method(__base__, "dist2plane", __dist2plane)
+    mobius_fn_apply = method(__base__, "mobius_fn_apply", NotImplemented)
+    mobius_fn_apply_chain = method(__base__, "mobius_fn_apply_chain", NotImplemented)
+    random_normal = method(__base__, 
         "random_normal",
         lambda s, *size, mean=0, std=1, dtype=None, device=None: torch.randn(
             *size, dtype=dtype, device=device
@@ -149,7 +150,7 @@ class PoincareBall(geoopt.PoincareBall):
         + mean,
     )
     random = random_normal
-    origin = method(
+    origin = method(__base__, 
         "origin",
         lambda s, *size, dtype=None, device=None: torch.zeros(
             *size, dtype=dtype, device=device
