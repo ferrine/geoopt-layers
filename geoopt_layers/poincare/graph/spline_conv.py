@@ -118,10 +118,10 @@ class HyperbolicSplineConv(HyperbolicMessagePassing):
                     ),
                 ]
             )  # ["log_x_j", "pseudo"]
-        kernel_size = torch.tensor(repeat(kernel_size, dim + local), dtype=torch.long)
+        kernel_size = torch.tensor(repeat(kernel_size, dim), dtype=torch.long)
         self.register_buffer("kernel_size", kernel_size)
 
-        is_open_spline = repeat(is_open_spline, dim + local)
+        is_open_spline = repeat(is_open_spline, dim)
         is_open_spline = torch.tensor(is_open_spline, dtype=torch.uint8)
         self.register_buffer("is_open_spline", is_open_spline)
 
@@ -152,7 +152,7 @@ class HyperbolicSplineConv(HyperbolicMessagePassing):
         bound = 1.0 / math.sqrt(size)
         self.weight.uniform_(-bound, bound)
         if self.root is not None:
-            torch.nn.init.eye_(self.root)
+            self.root.uniform_(-bound, bound)
         if self.bias is not None:
             self.bias.zero_()
 
