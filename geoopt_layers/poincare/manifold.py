@@ -158,15 +158,19 @@ class PoincareBall(geoopt.PoincareBall):
 
     def enable(self):
         self.disabled = False
+        return self
 
     def disable(self):
         self.disabled = True
+        return self
 
     def set_enabled(self, mode=True):
         self.disabled = not mode
+        return self
 
     def set_disabled(self, mode=True):
         self.set_enabled(not mode)
+        return self
 
     def extra_repr(self):
         return super().extra_repr() + ", disabled={}".format(self.disabled)
