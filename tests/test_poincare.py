@@ -2,6 +2,7 @@ import geoopt_layers
 import itertools
 import torch
 import pytest
+import geoopt
 import numpy as np
 
 
@@ -11,7 +12,7 @@ def disable(request):
 
 
 def test_linear_same_ball(disable):
-    ball = geoopt_layers.poincare.PoincareBall(disable=disable)
+    ball = geoopt.Scaled(geoopt_layers.poincare.PoincareBall(disable=disable))
     point = ball.random(2, 3, 5)
     layer = geoopt_layers.poincare.MobiusLinear(5, 5, ball=ball)
     out = layer(point)

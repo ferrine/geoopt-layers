@@ -1,18 +1,6 @@
 import geoopt
 import torch
-import functools
-
-
-def method(cls, name, alternative=None):
-    @functools.wraps(getattr(cls, name))
-    def impl(self, *args, **kwargs):
-        if self.disabled and alternative is None:
-            return getattr(geoopt.Euclidean, name)(self, *args, **kwargs)
-        elif self.disabled:
-            return alternative(self, *args, **kwargs)
-        else:
-            return getattr(self.__base__, name)(self, *args, **kwargs)
-    return impl
+from typing import Tuple, Optional
 
 
 class PoincareBall(geoopt.PoincareBall):
@@ -27,24 +15,65 @@ class PoincareBall(geoopt.PoincareBall):
         self.ndim = 1
         self.disabled = disable
 
-    _check_point_on_manifold = method(__base__, "_check_point_on_manifold")
-    _check_vector_on_tangent = method(__base__, "_check_vector_on_tangent")
-    dist = method(__base__, 
-        "dist",
-        lambda s, x, y, *, keepdim=False, dim=-1: (x - y).norm(
-            dim=dim, keepdim=keepdim
-        ),
-    )
-    dist2 = method(__base__, 
-        "dist2",
-        lambda s, x, y, *, keepdim=False, dim=-1: (x - y).sum(dim=dim, keepdim=keepdim),
-    )
-    egrad2rgrad = method(__base__, "egrad2rgrad", lambda s, x, u, *, dim=-1: u)
-    retr = method(__base__, "retr", lambda s, x, u, *, dim=-1: x + u)
-    projx = method(__base__, "projx", lambda s, x, *, dim=-1: x)
-    proju = method(__base__, "proju", lambda s, x, u, *, dim=-1: x + u)
+    def _check_point_on_manifold(
+        self, x: torch.Tensor, *, atol=1e-5, rtol=1e-5, dim=-1
+    ) -> Tuple[bool, Optional[str]]:
+        if self.disabled:
+            return True, None
+        else:
+            return super()._check_point_on_manifold(x=x, atol=atol, rtol=rtol, dim=-1)
 
-    def __inner(
+    def _check_vector_on_tangent(
+        self, x: torch.Tensor, u: torch.Tensor, *, atol=1e-5, rtol=1e-5, dim=-1
+    ) -> Tuple[bool, Optional[str]]:
+        if self.disabled:
+            return True, None
+        else:
+            return super()._check_vector_on_tangent(
+                x=x, u=u, atol=atol, rtol=rtol, dim=dim
+            )
+
+    def dist(
+        self, x: torch.Tensor, y: torch.Tensor, *, keepdim=False, dim=-1
+    ) -> torch.Tensor:
+        if self.disabled:
+            return (x - y).norm(dim=dim, keepdim=keepdim)
+        else:
+            return super().dist(x=x, y=y, dim=dim, keepdim=keepdim)
+
+    def dist2(
+        self, x: torch.Tensor, y: torch.Tensor, *, keepdim=False, dim=-1
+    ) -> torch.Tensor:
+        if self.disabled:
+            return (x - y).pow(2).sum(dim=dim, keepdim=keepdim)
+        else:
+            return super().dist2(x=x, y=y, dim=dim, keepdim=keepdim)
+
+    def egrad2rgrad(self, x: torch.Tensor, u: torch.Tensor, *, dim=-1) -> torch.Tensor:
+        if self.disabled:
+            return u
+        else:
+            return super().egrad2rgrad(x=x, u=u, dim=dim)
+
+    def retr(self, x: torch.Tensor, u: torch.Tensor, *, dim=-1) -> torch.Tensor:
+        if self.disabled:
+            return x + u
+        else:
+            return super().retr(x=x, u=u, dim=dim)
+
+    def projx(self, x: torch.Tensor, *, dim=-1) -> torch.Tensor:
+        if self.disabled:
+            return x
+        else:
+            return super().projx(x=x, dim=dim)
+
+    def proju(self, x: torch.Tensor, u: torch.Tensor, *, dim=-1) -> torch.Tensor:
+        if self.disabled:
+            return u
+        else:
+            return super().proju(x=x, u=u, dim=dim)
+
+    def inner(
         self,
         x: torch.Tensor,
         u: torch.Tensor,
@@ -53,75 +82,194 @@ class PoincareBall(geoopt.PoincareBall):
         keepdim=False,
         dim=-1
     ) -> torch.Tensor:
-        if v is None:
-            inner = u.pow(2).sum(dim=dim, keepdim=keepdim)
+        if self.disabled:
+            if v is None:
+                inner = u.pow(2).sum(dim=dim, keepdim=keepdim)
+            else:
+                inner = (u * v).sum(dim=dim, keepdim=keepdim)
+            return inner
         else:
-            inner = (u * v).sum(dim=dim, keepdim=keepdim)
-        return inner
+            return super().inner(x=x, u=u, v=v, dim=dim, keepdim=keepdim)
 
-    inner = method(__base__, "inner", __inner)
-
-    def __norm(
+    def norm(
         self, x: torch.Tensor, u: torch.Tensor, *, keepdim=False, dim=-1
     ) -> torch.Tensor:
-        norm = u.norm(dim=dim, keepdim=keepdim)
-        return norm
+        if self.disabled:
+            return u.norm(dim=dim, keepdim=keepdim)
+        else:
+            return super().norm(x=x, u=u, keepdim=keepdim, dim=dim)
 
-    norm = method(__base__, "norm", __norm)
-    expmap = method(__base__, "expmap", lambda s, x, u, *, dim=-1: x + u)
-    logmap = method(__base__, "logmap", lambda s, x, y, *, dim=-1: y - x)
-    transp = method(__base__, "transp", lambda s, x, y, v, *, dim=-1: v)
-    transp_follow_retr = method(__base__, "transp_follow_retr", lambda s, x, u, v, *, dim=-1: v)
-    transp_follow_expmap = method(__base__, 
-        "transp_follow_expmap", lambda s, x, u, v, *, dim=-1: v
-    )
-    expmap_transp = method(__base__, "expmap_transp", lambda s, x, u, v, *, dim=-1: (x + u, v))
-    retr_transp = method(__base__, "retr_transp", lambda s, x, u, v, *, dim=-1: (x + u, v))
+    def expmap(
+        self, x: torch.Tensor, u: torch.Tensor, *, project=True, dim=-1
+    ) -> torch.Tensor:
+        if self.disabled:
+            return x + u
+        else:
+            return super().expmap(x=x, u=u, project=project, dim=dim)
 
-    # need alternative
-    mobius_add = method(__base__, "mobius_add", lambda s, x, y, *, dim=-1, project=True: x + y)
-    mobius_sub = method(__base__, "mobius_sub", lambda s, x, y, *, dim=-1, project=True: x - y)
-    mobius_coadd = method(__base__, 
-        "mobius_coadd", lambda s, x, y, *, dim=-1, project=True: x + y
-    )
-    mobius_cosub = method(__base__, 
-        "mobius_cosub", lambda s, x, y, *, dim=-1, project=True: x - y
-    )
-    mobius_scalar_mul = method(__base__, 
-        "mobius_scalar_mul", lambda s, r, x, *, dim=-1, project=True: r * x
-    )
-    mobius_pointwise_mul = method(__base__, 
-        "mobius_pointwise_mul", lambda s, w, x, *, dim=-1, project=True: w * x
-    )
-    mobius_matvec = method(__base__, 
-        "mobius_matvec",
-        lambda s, m, x, *, dim=-1, project=True: torch.tensordot(
-            x, m, dims=([dim], [1])
-        ),
-    )
-    geodesic = method(__base__, 
-        "geodesic", lambda s, t, x, y, *, dim=-1, project=True: torch.lerp(x, y, t)
-    )
+    def logmap(self, x: torch.Tensor, y: torch.Tensor, *, dim=-1) -> torch.Tensor:
+        if self.disabled:
+            return y - x
+        else:
+            return super().logmap(x=x, y=y, dim=dim)
 
-    def __geodesic_unit(self, t, x, u, *, dim=-1, project=True):
-        u = u / u.norm(dim=dim, keepdim=True).clamp_min(1e-5)
-        return x + u * t
+    def transp(self, x: torch.Tensor, y: torch.Tensor, v: torch.Tensor, *, dim=-1):
+        if self.disabled:
+            return v
+        else:
+            return super().transp(x=x, y=y, v=v, dim=dim)
 
-    geodesic_unit = method(__base__, "geodesic_unit", __geodesic_unit)
-    lambda_x = method(__base__, 
-        "lambda_x",
-        lambda s, x, *, keepdim=False, dim=-1: torch.full_like(x.narrow(dim, 0, 1), 2),
-    )
-    dist0 = method(__base__, 
-        "dist0", lambda s, x, *, dim=-1, keepdim=True: x.norm(dim=dim, keepdim=keepdim)
-    )
-    expmap0 = method(__base__, "expmap0", lambda s, u, *, dim=-1, project=True: u)
-    logmap0 = method(__base__, "logmap0", lambda s, x, *, dim=-1: x)
-    transp0 = method(__base__, "transp0", lambda s, y, u, *, dim=-1: u)
-    transp0back = method(__base__, "transp0back", lambda s, y, u, *, dim=-1: u)
-    gyration = method(__base__, "gyration", lambda s, x, y, z, *, dim=-1: z)
+    def transp_follow_retr(
+        self, x: torch.Tensor, u: torch.Tensor, v: torch.Tensor, *, dim=-1
+    ) -> torch.Tensor:
+        if self.disabled:
+            return v
+        else:
+            return super().transp_follow_retr(x=x, u=u, v=v, dim=dim)
 
-    def __dist2plane(
+    def transp_follow_expmap(
+        self, x: torch.Tensor, u: torch.Tensor, v: torch.Tensor, *, dim=-1, project=True
+    ) -> torch.Tensor:
+        if self.disabled:
+            return v
+        else:
+            return super().transp_follow_expmap(x=x, u=u, v=v, dim=dim, project=project)
+
+    def expmap_transp(
+        self, x: torch.Tensor, u: torch.Tensor, v: torch.Tensor, *, dim=-1, project=True
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        if self.disabled:
+            return x + u, v
+        else:
+            return super().expmap_transp(x=x, u=u, v=v, dim=dim, project=project)
+
+    def retr_transp(
+        self, x: torch.Tensor, u: torch.Tensor, v: torch.Tensor, *, dim=-1
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        if self.disabled:
+            return x + u, v
+        else:
+            return super().retr_transp(x=x, u=u, v=v, dim=dim)
+
+    def mobius_add(
+        self, x: torch.Tensor, y: torch.Tensor, *, dim=-1, project=True
+    ) -> torch.Tensor:
+        if self.disabled:
+            return x + y
+        else:
+            return super().mobius_add(x=x, y=y, dim=dim, project=project)
+
+    def mobius_sub(
+        self, x: torch.Tensor, y: torch.Tensor, *, dim=-1, project=True
+    ) -> torch.Tensor:
+        if self.disabled:
+            return x - y
+        else:
+            return super().mobius_sub(x=x, y=y, dim=dim, project=project)
+
+    def mobius_coadd(
+        self, x: torch.Tensor, y: torch.Tensor, *, dim=-1, project=True
+    ) -> torch.Tensor:
+        if self.disabled:
+            return x + y
+        else:
+            return super().mobius_coadd(x=x, y=y, dim=dim, project=project)
+
+    def mobius_cosub(
+        self, x: torch.Tensor, y: torch.Tensor, *, dim=-1, project=True
+    ) -> torch.Tensor:
+        if self.disabled:
+            return x - y
+        else:
+            return super().mobius_cosub(x=x, y=y, dim=dim, project=project)
+
+    def mobius_scalar_mul(
+        self, r: torch.Tensor, x: torch.Tensor, *, dim=-1, project=True
+    ) -> torch.Tensor:
+        if self.disabled:
+            return r * x
+        else:
+            return super().mobius_scalar_mul(r=r, x=x, dim=dim, project=project)
+
+    def mobius_pointwise_mul(
+        self, w: torch.Tensor, x: torch.Tensor, *, dim=-1, project=True
+    ) -> torch.Tensor:
+        if self.disabled:
+            return w * x
+        else:
+            return self.mobius_pointwise_mul(w=w, x=x, dim=dim, project=project)
+
+    def mobius_matvec(
+        self, m: torch.Tensor, x: torch.Tensor, *, dim=-1, project=True
+    ) -> torch.Tensor:
+        if self.disabled:
+            return torch.tensordot(x, m, dims=([dim], [1]))
+        else:
+            return super().mobius_matvec(m=m, x=x, dim=dim, project=project)
+
+    def geodesic(
+        self, t: torch.Tensor, x: torch.Tensor, y: torch.Tensor, *, dim=-1
+    ) -> torch.Tensor:
+        if self.disabled:
+            return torch.lerp(x, y, t)
+        else:
+            return super().geodesic(t=t, x=x, y=y, dim=dim)
+
+    def geodesic_unit(self, t, x, u, *, dim=-1, project=True):
+        if self.disabled:
+            u = u / u.norm(dim=dim, keepdim=True).clamp_min(1e-5)
+            return x + u * t
+        else:
+            return super().geodesic_unit(t=t, x=x, u=u, dim=dim, project=project)
+
+    def lambda_x(self, x: torch.Tensor, *, dim=-1, keepdim=False) -> torch.Tensor:
+        if self.disabled:
+            lam = torch.full_like(x.narrow(dim, 0, 1), 2)
+            if not keepdim:
+                lam = lam.squeeze(dim)
+            return lam
+        else:
+            return super().lambda_x(x=x, dim=dim, keepdim=keepdim)
+
+    def dist0(self, x: torch.Tensor, *, dim=-1, keepdim=False) -> torch.Tensor:
+        if self.disabled:
+            return x.norm(dim=dim, keepdim=keepdim)
+        else:
+            return super().dist0(x=x, dim=dim, keepdim=keepdim)
+
+    def expmap0(self, u: torch.Tensor, *, dim=-1, project=True) -> torch.Tensor:
+        if self.disabled:
+            return u
+        else:
+            return super().expmap0(u=u, dim=dim, project=project)
+
+    def logmap0(self, x: torch.Tensor, *, dim=-1) -> torch.Tensor:
+        if self.disabled:
+            return x
+        else:
+            return super().logmap0(x=x, dim=dim)
+
+    def transp0(self, y: torch.Tensor, u: torch.Tensor, *, dim=-1) -> torch.Tensor:
+        if self.disabled:
+            return u
+        else:
+            return super().transp0(y=y, u=u, dim=dim)
+
+    def transp0back(self, y: torch.Tensor, u: torch.Tensor, *, dim=-1) -> torch.Tensor:
+        if self.disabled:
+            return u
+        else:
+            return super().transp0back(y=y, u=u, dim=dim)
+
+    def gyration(
+        self, x: torch.Tensor, y: torch.Tensor, z: torch.Tensor, *, dim=-1
+    ) -> torch.Tensor:
+        if self.disabled:
+            return z
+        else:
+            return super().gyration(x=x, y=y, z=z, dim=dim)
+
+    def dist2plane(
         self,
         x: torch.Tensor,
         p: torch.Tensor,
@@ -131,31 +279,37 @@ class PoincareBall(geoopt.PoincareBall):
         keepdim=False,
         signed=False
     ) -> torch.Tensor:
-        a = a / a.norm(dim=dim, keepdim=True).clamp_min(1e-5)
-        dist = ((x - p) * a).sum(dim=dim, keepdim=keepdim)
-        if signed:
-            return dist
+        if self.disabled:
+            a = a / a.norm(dim=dim, keepdim=True).clamp_min(1e-5)
+            dist = ((x - p) * a).sum(dim=dim, keepdim=keepdim)
+            if signed:
+                return dist
+            else:
+                return dist.abs()
         else:
-            return dist.abs()
+            return super().dist2plane(
+                x=x, p=p, a=a, dim=dim, keepdim=keepdim, signed=signed
+            )
 
-    dist2plane = method(__base__, "dist2plane", __dist2plane)
-    mobius_fn_apply = method(__base__, "mobius_fn_apply", NotImplemented)
-    mobius_fn_apply_chain = method(__base__, "mobius_fn_apply_chain", NotImplemented)
-    random_normal = method(__base__, 
-        "random_normal",
-        lambda s, *size, mean=0, std=1, dtype=None, device=None: torch.randn(
-            *size, dtype=dtype, device=device
-        )
-        * std
-        + mean,
-    )
-    random = random_normal
-    origin = method(__base__, 
-        "origin",
-        lambda s, *size, dtype=None, device=None: torch.zeros(
-            *size, dtype=dtype, device=device
-        ),
-    )
+    def mobius_fn_apply(
+        self, fn: callable, x: torch.Tensor, *args, dim=-1, project=True, **kwargs
+    ) -> torch.Tensor:
+        if self.disabled:
+            return fn(x, *args, **kwargs)
+        else:
+            return super().mobius_fn_apply(
+                fn=fn, x=x, *args, dim=dim, project=project, **kwargs
+            )
+
+    def mobius_fn_apply_chain(
+        self, x: torch.Tensor, *fns: callable, project=True, dim=-1
+    ) -> torch.Tensor:
+        if self.disabled:
+            for fn in fns:
+                x = fn(x)
+            return x
+        else:
+            return super().mobius_fn_apply(fns=fns, x=x, dim=dim, project=project)
 
     def enable(self):
         self.disabled = False
