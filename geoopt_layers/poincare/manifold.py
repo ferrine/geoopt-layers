@@ -91,6 +91,18 @@ class PoincareBall(geoopt.PoincareBall):
         else:
             return super().inner(x=x, u=u, v=v, dim=dim, keepdim=keepdim)
 
+    def component_inner(
+        self, x: torch.Tensor, u: torch.Tensor, v: torch.Tensor = None
+    ) -> torch.Tensor:
+        if self.disabled:
+            if v is None:
+                inner = u.pow(2)
+            else:
+                inner = (u * v)
+            return inner
+        else:
+            return super().component_inner(x=x, u=u, v=v).expand_as(x)
+
     def norm(
         self, x: torch.Tensor, u: torch.Tensor, *, keepdim=False, dim=-1
     ) -> torch.Tensor:
