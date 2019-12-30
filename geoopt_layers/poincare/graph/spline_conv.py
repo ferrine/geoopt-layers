@@ -215,7 +215,6 @@ class HyperbolicSplineConv(HyperbolicMessagePassing):
                 self._buffers["is_open_spline"],
                 self.degree,
             )
-            log_xi_x_j = torch.relu(log_xi_x_j)
             log_z_j = SplineWeighting.apply(log_xi_x_j, self.weight, *data)
         else:
             data = SplineBasis.apply(
