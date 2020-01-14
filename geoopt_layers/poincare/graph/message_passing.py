@@ -44,6 +44,7 @@ class HyperbolicMessagePassing(MessagePassing, ManifoldModule):
         node_dim=0,
     ):
         assert node_dim in {0}, "other dims are not yet supported"
+        assert aggr != "max", "max is not yet supported"
         super(HyperbolicMessagePassing, self).__init__(
             aggr=aggr, flow=flow, node_dim=node_dim
         )
