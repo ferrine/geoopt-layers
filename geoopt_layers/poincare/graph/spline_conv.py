@@ -5,6 +5,7 @@ from torch.nn import Parameter
 import torch_geometric
 from .message_passing import HyperbolicMessagePassing
 from ...utils import repeat
+import collections
 import inspect
 
 try:
@@ -98,25 +99,29 @@ class HyperbolicSplineConv(HyperbolicMessagePassing):
             )
         self.local = local
         if self.local:
-            self.__message_signature__ = inspect.Signature(
-                [
-                    inspect.Parameter("x_i", inspect.Parameter.POSITIONAL_OR_KEYWORD),
-                    inspect.Parameter("x_j", inspect.Parameter.POSITIONAL_OR_KEYWORD),
-                    inspect.Parameter(
+            self.__msg_params__ = collections.OrderedDict(
+                {
+                    "x_i": inspect.Parameter(
+                        "x_i", inspect.Parameter.POSITIONAL_OR_KEYWORD
+                    ),
+                    "x_j": inspect.Parameter(
+                        "x_j", inspect.Parameter.POSITIONAL_OR_KEYWORD
+                    ),
+                    "pseudo": inspect.Parameter(
                         "pseudo", inspect.Parameter.POSITIONAL_OR_KEYWORD
                     ),
-                ]
+                }
             )  # ["x_i", "x_j", "pseudo"]
         else:
-            self.__message_signature__ = inspect.Signature(
-                [
-                    inspect.Parameter(
+            self.__msg_params__ = collections.OrderedDict(
+                {
+                    "log_x_j": inspect.Parameter(
                         "log_x_j", inspect.Parameter.POSITIONAL_OR_KEYWORD
                     ),
-                    inspect.Parameter(
+                    "pseudo": inspect.Parameter(
                         "pseudo", inspect.Parameter.POSITIONAL_OR_KEYWORD
                     ),
-                ]
+                }
             )  # ["log_x_j", "pseudo"]
         kernel_size = torch.tensor(repeat(kernel_size, dim), dtype=torch.long)
         self.register_buffer("kernel_size", kernel_size)

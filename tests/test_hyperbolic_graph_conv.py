@@ -8,7 +8,7 @@ from geoopt_layers.poincare.graph.graph_conv import HyperbolicGraphConv
 @pytest.mark.parametrize(
     "aggr,aggr_method,bias,local,sizes,weighted",
     itertools.product(
-        ["mean", "sum"],
+        ["mean", "add"],
         ["einstein", "tangent"],
         [True, False],
         [True, False],

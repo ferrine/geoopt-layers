@@ -1,5 +1,6 @@
 from .message_passing import HyperbolicMessagePassing
 import torch
+import collections
 import inspect
 
 
@@ -23,7 +24,6 @@ class HyperbolicGraphConv(HyperbolicMessagePassing):
         ball,
         ball_out=None,
         local=False,
-        local_dropout=0.0,
         aggr_method="einstein",
     ):
         if ball_out is None:
@@ -37,17 +37,24 @@ class HyperbolicGraphConv(HyperbolicMessagePassing):
         self.out_channels = out_channels
         self.local = local
         if self.local:
-            self.__message_signature__ = inspect.Signature(
-                [
-                    inspect.Parameter("x_i", inspect.Parameter.POSITIONAL_OR_KEYWORD),
-                    inspect.Parameter("x_j", inspect.Parameter.POSITIONAL_OR_KEYWORD),
-                ]
+            self.__message_params__ = collections.OrderedDict(
+                {
+                    "x_i": inspect.Parameter(
+                        "x_i", inspect.Parameter.POSITIONAL_OR_KEYWORD
+                    ),
+                    "x_j": inspect.Parameter(
+                        "x_j", inspect.Parameter.POSITIONAL_OR_KEYWORD
+                    ),
+                }
             )  # ["x_i", "x_j"]
         else:
-            self.__message_signature__ = inspect.Signature(
-                [inspect.Parameter("h_j", inspect.Parameter.POSITIONAL_OR_KEYWORD)]
+            self.__message_params__ = collections.OrderedDict(
+                {
+                    "h_j": inspect.Parameter(
+                        "h_j", inspect.Parameter.POSITIONAL_OR_KEYWORD
+                    )
+                }
             )  # ["h_j"]
-        self.local_dropppout = local_dropout
         self.weight_neighbors = torch.nn.Parameter(
             torch.empty(in_channels, out_channels), requires_grad=True
         )

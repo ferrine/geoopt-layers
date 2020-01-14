@@ -1,5 +1,6 @@
 import torch.nn
 import inspect
+import collections
 from .message_passing import HyperbolicMessagePassing
 
 
@@ -34,8 +35,12 @@ class HyperbolicGCNConv(HyperbolicMessagePassing):
         self.local = local
         if not self.local:
             # remove x_i
-            self.__message_signature__ = inspect.Signature(
-                [inspect.Parameter("x_j", inspect.Parameter.POSITIONAL_OR_KEYWORD)]
+            self.__msg_params__ = collections.OrderedDict(
+                {
+                    "x_j": inspect.Parameter(
+                        "x_j", inspect.Parameter.POSITIONAL_OR_KEYWORD
+                    )
+                }
             )
         self.weight = torch.nn.Parameter(
             torch.empty(in_channels, out_channels), requires_grad=True

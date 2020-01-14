@@ -1,5 +1,10 @@
 from ..math import poincare_mean_scatter
-from torch_geometric.nn.conv.message_passing import MessagePassing
+from torch_geometric.nn.conv.message_passing import (
+    MessagePassing,
+    msg_special_args,
+    aggr_special_args,
+    update_special_args,
+)
 from ...base import ManifoldModule
 
 special_args = [
@@ -17,7 +22,17 @@ __size_error_msg__ = (
 
 
 class HyperbolicMessagePassing(MessagePassing, ManifoldModule):
-    __aggr__ = {"sum", "mean"}
+    @property
+    def __args__(self):
+        msg_args = set(self.__msg_params__.keys()) - msg_special_args
+        aggr_args = set(self.__aggr_params__.keys()) - aggr_special_args
+        update_args = set(self.__update_params__.keys()) - update_special_args
+
+        return set().union(msg_args, aggr_args, update_args)
+
+    @__args__.setter
+    def __args__(self, new):
+        pass
 
     def __init__(
         self,
@@ -35,15 +50,15 @@ class HyperbolicMessagePassing(MessagePassing, ManifoldModule):
         self.ball = ball
         self.aggr_method = aggr_method
 
-    def aggregate(self, out, index, dim, dim_size, edge_weight=None):
+    def aggregate(self, out, index, dim_size, edge_weight=None):
         out = poincare_mean_scatter(
             out,
             index,
             weights=edge_weight,
-            dim=dim,
+            dim=self.node_dim,
             dim_size=dim_size,
             ball=self.ball,
-            lincomb=self.aggr == "sum",
+            lincomb=self.aggr == "add",
             method=self.aggr_method,
         )
         return out
