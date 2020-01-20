@@ -61,7 +61,7 @@ def test_linear_new_ball_origin(disable):
     ball2.assert_check_point_on_manifold(out)
 
 
-def test_linear_new_ball_origin(disable):
+def test_linear_new_ball0_origin(disable):
     ball = geoopt_layers.poincare.PoincareBall(disable=disable)
     ball2 = geoopt_layers.poincare.PoincareBall(disable=disable)
     point = ball.random(2, 3, 5)
