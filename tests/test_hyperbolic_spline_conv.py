@@ -2,19 +2,9 @@ import itertools
 import torch
 import pytest
 import numpy as np
+import geoopt
 from torch_geometric.nn.conv.spline_conv import SplineConv
-from geoopt_layers.poincare import PoincareBallExact
 from geoopt_layers.poincare.graph import HyperbolicSplineConv
-
-
-@pytest.fixture(params=[True, False])
-def disable1(request):
-    return request.param
-
-
-@pytest.fixture(params=[True, False])
-def disable2(request):
-    return request.param
 
 
 @pytest.mark.parametrize(
@@ -30,10 +20,18 @@ def disable2(request):
     ),
 )
 def test_spline_conv(
-    bias, sizes, kernel_size, degree, root_weight, dim, local, disable1, disable2
+    bias,
+    sizes,
+    kernel_size,
+    degree,
+    root_weight,
+    dim,
+    local,
+    disable1,
+    disable2,
+    ball_1,
+    ball_2,
 ):
-    ball = PoincareBallExact(disable=disable1)
-    ball_out = PoincareBallExact(c=0.1, disable=disable2)
     edge_index = torch.tensor([[0, 0, 0, 1, 2, 3, 0], [1, 2, 3, 0, 0, 0, 0]])
     x = ball.random(4, 5)
     pseudo = torch.rand(edge_index.size(1), dim)
@@ -42,8 +40,8 @@ def test_spline_conv(
         out = HyperbolicSplineConv(
             *sizes,
             bias=bias,
-            ball=ball,
-            ball_out=ball_out,
+            ball=ball_1,
+            ball_out=ball_2,
             kernel_size=kernel_size,
             degree=degree,
             root_weight=root_weight,
@@ -51,7 +49,7 @@ def test_spline_conv(
             local=local,
         )(x, edge_index, pseudo=pseudo)
         assert out.shape == (4, sizes[-1])
-        ball_out.assert_check_point_on_manifold(out)
+        ball_2.assert_check_point_on_manifold(out)
         out.sum().backward()
     else:
         with pytest.raises(TypeError) as e:
@@ -81,8 +79,8 @@ def test_spline_conv(
     ),
 )
 def test_spline_conv(bias, sizes, kernel_size, degree, root_weight, dim):
-    ball = PoincareBallExact(disable=True)
-    ball_out = PoincareBallExact(c=0.1, disable=True)
+    ball = geoopt.Stereographic()
+    ball_out = geoopt.Stereographic()
     edge_index = torch.tensor([[0, 0, 0, 1, 2, 3, 0], [1, 2, 3, 0, 0, 0, 0]])
     x = ball.random(4, 5)
     pseudo = torch.rand(edge_index.size(1), dim)

@@ -1,7 +1,6 @@
 import itertools
 import torch
 import pytest
-import geoopt
 from geoopt_layers.poincare.graph.graph_conv import HyperbolicGraphConv
 
 
@@ -16,23 +15,21 @@ from geoopt_layers.poincare.graph.graph_conv import HyperbolicGraphConv
         [True, False],
     ),
 )
-def test_graph_conv(aggr, aggr_method, bias, local, sizes, weighted):
-    ball = geoopt.PoincareBallExact()
-    ball_out = geoopt.PoincareBallExact(c=0.1)
+def test_graph_conv(aggr, aggr_method, bias, local, sizes, weighted, ball_1, ball_2):
     edge_index = torch.tensor([[0, 0, 0, 1, 1, 1], [0, 1, 2, 0, 1, 2]])
     if weighted:
         edge_weight = torch.rand(edge_index.size(1))
     else:
         edge_weight = None
-    x = ball.random(3, 5)
+    x = ball_1.random(3, 5)
     out = HyperbolicGraphConv(
         *sizes,
         aggr=aggr,
         aggr_method=aggr_method,
         bias=bias,
         local=local,
-        ball=ball,
-        ball_out=ball_out
+        ball=ball_1,
+        ball_out=ball_2
     )(x, edge_index, size=(3, 3), edge_weight=edge_weight)
     assert out.shape == (3, sizes[-1])
-    ball_out.assert_check_point_on_manifold(out)
+    ball_2.assert_check_point_on_manifold(out)

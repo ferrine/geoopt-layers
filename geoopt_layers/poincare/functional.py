@@ -1,7 +1,6 @@
-import geoopt
 import torch.nn.functional
 import functools
-from geoopt_layers.poincare import math
+import geoopt.utils
 
 
 def mobius_adaptive_max_pool2d(input, output_size, return_indices=False):
@@ -49,6 +48,7 @@ def mobius_max_pool2d(
 def mobius_avg_pool2d(
     input, kernel_size, stride=None, padding=0, ceil_mode=False, *, ball
 ):
+    assert torch.all(geoopt.utils.canonical_manifold(ball).k.le(0)), "TODO: Positive"
     gamma = ball.lambda_x(input, dim=-3, keepdim=True)
     numerator = torch.nn.functional.avg_pool2d(
         input * gamma,
@@ -67,11 +67,13 @@ def mobius_avg_pool2d(
         count_include_pad=False,
     )
     output = numerator / denominator
-    output = ball.mobius_scalar_mul(0.5, output, dim=-3)
+    alpha = torch.tensor(0.5, dtype=input.dtype, device=input.device)
+    output = ball.mobius_scalar_mul(alpha, output, dim=-3)
     return output
 
 
 def mobius_adaptive_avg_pool2d(input, output_size, *, ball):
+    assert torch.all(geoopt.utils.canonical_manifold(ball).k.le(0)), "TODO: Positive"
     gamma = ball.lambda_x(input, dim=-3, keepdim=True)
     numerator = torch.nn.functional.adaptive_avg_pool2d(
         input * gamma, output_size=output_size
@@ -80,7 +82,8 @@ def mobius_adaptive_avg_pool2d(input, output_size, *, ball):
         gamma - 1, output_size=output_size
     )
     output = numerator / denominator
-    output = ball.mobius_scalar_mul(0.5, output, dim=-3)
+    alpha = torch.tensor(0.5, dtype=input.dtype, device=input.device)
+    output = ball.mobius_scalar_mul(alpha, output, dim=-3)
     return output
 
 
@@ -100,15 +103,15 @@ def mobius_batch_norm_nd(
 ):
     dim = -n - 1
     if alpha is None:
-        alpha = 1.0
+        alpha = torch.tensor(1.0, dtype=input.dtype, device=input.device)
     else:
         alpha = alpha.view(alpha.shape + (1,) * n)
     if training:
         reduce_dim = tuple(range(-n, 0)) + tuple(
             range(-input.dim(), -running_midpoint.dim() - n)
         )
-        midpoint = math.poincare_mean(
-            input, dim=dim, reducedim=reduce_dim, keepdim=True, ball=ball
+        midpoint = ball.weighted_midpoint(
+            input, dim=dim, reducedim=reduce_dim, keepdim=True
         )
         variance = ball.dist2(midpoint, input, dim=dim, keepdim=True)
         variance = variance.mean(dim=reduce_dim, keepdim=True)
@@ -118,6 +121,7 @@ def mobius_batch_norm_nd(
         )
         with torch.no_grad():
             running_variance.lerp_(variance.view_as(running_variance), beta1)
+            beta2 = torch.as_tensor(beta2, dtype=input.dtype, device=input.device)
             running_midpoint.set_(
                 ball.geodesic(
                     beta2, midpoint.view_as(running_midpoint), running_midpoint, dim=-1
@@ -192,6 +196,9 @@ def mobius_conv2d(
     assert weight_avg.shape[:2] == (points_out, points_in)
     if ball_out is None:
         ball_out = ball
+    assert torch.all(
+        geoopt.utils.canonical_manifold(ball_out).k.le(0)
+    ), "TODO: Positive"
     if weight_mm is not None:
         input = ball.logmap0(input, dim=2)
         input = input.transpose(1, 2).reshape(input.shape[0], -1, *input.shape[-2:])
@@ -225,5 +232,6 @@ def mobius_conv2d(
     output_denominator = output_denominator.repeat_interleave(out_dim, dim=1)
     two_mean = output_nominator / output_denominator
     two_mean = two_mean.view(two_mean.shape[0], -1, points_out, *two_mean.shape[-2:])
-    mean = ball.mobius_scalar_mul(0.5, two_mean, dim=1)
+    alpha = torch.tensor(0.5, device=input.device, dtype=input.dtype)
+    mean = ball.mobius_scalar_mul(alpha, two_mean, dim=1)
     return mean.transpose(1, 2)  # output BxPxDxWxH

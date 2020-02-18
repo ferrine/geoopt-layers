@@ -142,7 +142,7 @@ class WeightedPoincareCentroids(ManifoldModule):
         return poincare_mean(
             self.centroids.view(self.centroids.shape + (1,) * self.n),
             weights=weights,
-            reducedim=-self.n - 2,
+            reducedim=[-self.n - 2],
             dim=-self.n - 1,
             ball=self.manifold,
             keepdim=False,

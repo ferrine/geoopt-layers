@@ -6,13 +6,7 @@ import geoopt
 import numpy as np
 
 
-@pytest.fixture(params=[True, False])
-def disable(request):
-    return request.param
-
-
-def test_linear_same_ball(disable):
-    ball = geoopt.Scaled(geoopt_layers.poincare.PoincareBall(disable=disable))
+def test_linear_same_ball(ball):
     point = ball.random(2, 3, 5)
     layer = geoopt_layers.poincare.MobiusLinear(5, 5, ball=ball)
     out = layer(point)
@@ -20,19 +14,15 @@ def test_linear_same_ball(disable):
     ball.assert_check_point_on_manifold(out)
 
 
-@pytest.mark.parametrize("disable", [True, False])
-def test_linear_new_ball(disable):
-    ball = geoopt_layers.poincare.PoincareBall(disable=disable)
-    ball2 = geoopt_layers.poincare.PoincareBall(disable=disable)
-    point = ball.random(2, 3, 5)
-    layer = geoopt_layers.poincare.MobiusLinear(5, 5, ball=ball, ball_out=ball2)
+def test_linear_new_ball(ball_1, ball_2):
+    point = ball_1.random(2, 3, 5)
+    layer = geoopt_layers.poincare.MobiusLinear(5, 5, ball=ball_1, ball_out=ball_2)
     out = layer(point)
 
-    ball2.assert_check_point_on_manifold(out)
+    ball_2.assert_check_point_on_manifold(out)
 
 
-def test_linear_new_ball1(disable):
-    ball = geoopt_layers.poincare.PoincareBall(disable=disable)
+def test_linear_new_ball1(ball):
     point = ball.random(2, 3, 5)
     layer = geoopt_layers.poincare.MobiusLinear(5, 5, ball=ball, ball_out=ball)
     out = layer(point)
@@ -40,8 +30,7 @@ def test_linear_new_ball1(disable):
     ball.assert_check_point_on_manifold(out)
 
 
-def test_linear_dim_change(disable):
-    ball = geoopt_layers.poincare.PoincareBall(disable=disable)
+def test_linear_dim_change(ball):
     point = ball.random(2, 3, 5)
     layer = geoopt_layers.poincare.MobiusLinear(5, 3, ball=ball, ball_out=ball)
     out = layer(point)
@@ -49,32 +38,27 @@ def test_linear_dim_change(disable):
     ball.assert_check_point_on_manifold(out)
 
 
-def test_linear_new_ball_origin(disable):
-    ball = geoopt_layers.poincare.PoincareBall(disable=disable)
-    ball2 = geoopt_layers.poincare.PoincareBall(disable=disable)
-    point = ball.random(2, 3, 5)
+def test_linear_new_ball_origin(ball_1, ball_2):
+    point = ball_1.random(2, 3, 5)
     layer = geoopt_layers.poincare.MobiusLinear(
-        5, 5, ball=ball, ball_out=ball2, learn_origin=True
+        5, 5, ball=ball_1, ball_out=ball_2, learn_origin=True
     )
     out = layer(point)
 
-    ball2.assert_check_point_on_manifold(out)
+    ball_2.assert_check_point_on_manifold(out)
 
 
-def test_linear_new_ball0_origin(disable):
-    ball = geoopt_layers.poincare.PoincareBall(disable=disable)
-    ball2 = geoopt_layers.poincare.PoincareBall(disable=disable)
-    point = ball.random(2, 3, 5)
+def test_linear_new_ball0_origin(ball_1, ball_2):
+    point = ball_1.random(2, 3, 5)
     layer = geoopt_layers.poincare.MobiusLinear(
-        5, 7, ball=ball, ball_out=ball2, learn_origin=True
+        5, 7, ball=ball_1, ball_out=ball_2, learn_origin=True
     )
     out = layer(point)
     assert out.shape == (2, 3, 7)
-    ball2.assert_check_point_on_manifold(out)
+    ball_2.assert_check_point_on_manifold(out)
 
 
-def test_linear_new_ball1_origin(disable):
-    ball = geoopt_layers.poincare.PoincareBall(disable=disable)
+def test_linear_new_ball1_origin(ball):
     point = ball.random(2, 3, 5)
     layer = geoopt_layers.poincare.MobiusLinear(
         5, 5, ball=ball, ball_out=ball, learn_origin=True
@@ -84,8 +68,7 @@ def test_linear_new_ball1_origin(disable):
     ball.assert_check_point_on_manifold(out)
 
 
-def test_avg_pool(disable):
-    ball = geoopt_layers.poincare.PoincareBall(disable=disable)
+def test_avg_pool(ball):
     point = ball.random(2, 5, 5, 2).permute(0, 3, 1, 2)
     layer = geoopt_layers.poincare.MobiusAvgPool2d((3, 3), ball=ball)
     out = layer(point)
@@ -94,8 +77,7 @@ def test_avg_pool(disable):
     ball.assert_check_point_on_manifold(out.permute(0, 2, 3, 1))
 
 
-def test_max_pool(disable):
-    ball = geoopt_layers.poincare.PoincareBall(disable=disable)
+def test_max_pool(ball):
     point = ball.random(2, 5, 5, 2).permute(0, 3, 1, 2)
     layer = geoopt_layers.poincare.MobiusMaxPool2d((3, 3), stride=1, ball=ball)
     out = layer(point)
@@ -104,8 +86,7 @@ def test_max_pool(disable):
     ball.assert_check_point_on_manifold(out.permute(0, 2, 3, 1))
 
 
-def test_adaptive_max_pool(disable):
-    ball = geoopt_layers.poincare.PoincareBall(disable=disable)
+def test_adaptive_max_pool(ball):
     point = ball.random(2, 5, 5, 2).permute(0, 3, 1, 2)
     layer = geoopt_layers.poincare.MobiusAdaptiveMaxPool2d((2, 2), ball=ball)
     out = layer(point)
@@ -114,8 +95,7 @@ def test_adaptive_max_pool(disable):
     ball.assert_check_point_on_manifold(out.permute(0, 2, 3, 1))
 
 
-def test_adaptive_avg_pool(disable):
-    ball = geoopt_layers.poincare.PoincareBall(disable=disable)
+def test_adaptive_avg_pool(ball):
     point = ball.random(2, 5, 5, 2).permute(0, 3, 1, 2)
     layer = geoopt_layers.poincare.MobiusAdaptiveAvgPool2d((2, 2), ball=ball)
     out = layer(point)
@@ -125,8 +105,8 @@ def test_adaptive_avg_pool(disable):
 
 
 @pytest.mark.parametrize("bias,train", itertools.product([True, False], [True, False]))
-def test_batch_norm(bias, train):
-    ball = geoopt_layers.poincare.PoincareBall(disable=disable)
+def test_batch_norm(bias, train, ball):
+
     point = ball.random(2, 5)
     layer = geoopt_layers.poincare.MobiusBatchNorm(5, ball=ball, bias=bias)
     layer.train(train)
@@ -137,8 +117,8 @@ def test_batch_norm(bias, train):
 
 
 @pytest.mark.parametrize("bias,train", itertools.product([True, False], [True, False]))
-def test_batch_norm_multi(bias, train, disable):
-    ball = geoopt_layers.poincare.PoincareBall(disable=disable)
+def test_batch_norm_multi(bias, train, ball):
+
     point = ball.random(2, 3, 4, 5)
     layer = geoopt_layers.poincare.MobiusBatchNorm((3, 4, 5), ball=ball, bias=bias)
     layer.train(train)
@@ -149,8 +129,8 @@ def test_batch_norm_multi(bias, train, disable):
 
 
 @pytest.mark.parametrize("bias,train", itertools.product([True, False], [True, False]))
-def test_batch_norm_1d(bias, train, disable):
-    ball = geoopt_layers.poincare.PoincareBall(disable=disable)
+def test_batch_norm_1d(bias, train, ball):
+
     point = ball.random(2, 5, 5, 2).permute(0, 1, 3, 2)
     layer = geoopt_layers.poincare.MobiusBatchNorm1d(2, ball=ball, bias=bias)
     layer.train(train)
@@ -161,8 +141,8 @@ def test_batch_norm_1d(bias, train, disable):
 
 
 @pytest.mark.parametrize("bias,train", itertools.product([True, False], [True, False]))
-def test_batch_norm_1d_multi(bias, train, disable):
-    ball = geoopt_layers.poincare.PoincareBall(disable=disable)
+def test_batch_norm_1d_multi(bias, train, ball):
+
     point = ball.random(2, 5, 3, 5, 2).permute(0, 1, 2, 4, 3)
     layer = geoopt_layers.poincare.MobiusBatchNorm1d((3, 2), ball=ball, bias=bias)
     layer.train(train)
@@ -173,8 +153,8 @@ def test_batch_norm_1d_multi(bias, train, disable):
 
 
 @pytest.mark.parametrize("bias,train", itertools.product([True, False], [True, False]))
-def test_batch_norm_2d(bias, train, disable):
-    ball = geoopt_layers.poincare.PoincareBall(disable=disable)
+def test_batch_norm_2d(bias, train, ball):
+
     point = ball.random(2, 5, 5, 2).permute(0, 3, 1, 2)
     layer = geoopt_layers.poincare.MobiusBatchNorm2d(2, ball=ball, bias=bias)
     layer.train(train)
@@ -185,8 +165,8 @@ def test_batch_norm_2d(bias, train, disable):
 
 
 @pytest.mark.parametrize("bias,train", itertools.product([True, False], [True, False]))
-def test_batch_norm_2d_multi(bias, train, disable):
-    ball = geoopt_layers.poincare.PoincareBall(disable=disable)
+def test_batch_norm_2d_multi(bias, train, ball):
+
     point = ball.random(2, 3, 5, 5, 2).permute(0, 1, 4, 2, 3)
     layer = geoopt_layers.poincare.MobiusBatchNorm2d((3, 2), ball=ball, bias=bias)
     layer.train(train)
@@ -196,8 +176,8 @@ def test_batch_norm_2d_multi(bias, train, disable):
     ball.assert_check_point_on_manifold(out.permute(0, 1, 3, 4, 2))
 
 
-def test_radial(disable):
-    ball = geoopt_layers.poincare.PoincareBall(disable=disable)
+def test_radial(ball):
+
     point = ball.random(2, 5, 5, 2).permute(0, 3, 1, 2)
     layer = geoopt_layers.poincare.RadialNd(torch.nn.ELU(), ball=ball)
     out = layer(point)
@@ -207,8 +187,8 @@ def test_radial(disable):
 @pytest.mark.parametrize(
     "squared,train,zero", itertools.product([True, False], [True, False], [True, False])
 )
-def test_dist_centroids_2d(squared, train, zero, disable):
-    ball = geoopt_layers.poincare.PoincareBall(disable=disable)
+def test_dist_centroids_2d(squared, train, zero, ball):
+
     point = ball.random(2, 5, 5, 2).permute(0, 3, 1, 2)
     layer = geoopt_layers.poincare.Distance2PoincareCentroids2d(
         centroid_shape=2, num_centroids=10, ball=ball, squared=squared, zero=zero
@@ -221,8 +201,8 @@ def test_dist_centroids_2d(squared, train, zero, disable):
 @pytest.mark.parametrize(
     "squared,train,zero", itertools.product([True, False], [True, False], [True, False])
 )
-def test_dist_centroids(squared, train, zero, disable):
-    ball = geoopt_layers.poincare.PoincareBall(disable=disable)
+def test_dist_centroids(squared, train, zero, ball):
+
     point = ball.random(2, 5, 5, 2)
     layer = geoopt_layers.poincare.Distance2PoincareCentroids(
         centroid_shape=2, num_centroids=10, ball=ball, squared=squared, zero=zero
@@ -235,8 +215,8 @@ def test_dist_centroids(squared, train, zero, disable):
 @pytest.mark.parametrize(
     "squared,train,zero", itertools.product([True, False], [True, False], [True, False])
 )
-def test_dist_centroids_1d_multi(squared, train, zero, disable):
-    ball = geoopt_layers.poincare.PoincareBall(disable=disable)
+def test_dist_centroids_1d_multi(squared, train, zero, ball):
+
     point = ball.random(2, 3, 5, 5, 2).permute(0, 1, 2, 4, 3)
     layer = geoopt_layers.poincare.Distance2PoincareCentroids1d(
         centroid_shape=2, num_centroids=10, ball=ball, squared=squared, zero=zero
@@ -249,8 +229,8 @@ def test_dist_centroids_1d_multi(squared, train, zero, disable):
 @pytest.mark.parametrize(
     "squared,train,zero", itertools.product([True, False], [True, False], [True, False])
 )
-def test_dist_centroids_2d_multi(squared, train, zero, disable):
-    ball = geoopt_layers.poincare.PoincareBall(disable=disable)
+def test_dist_centroids_2d_multi(squared, train, zero, ball):
+
     point = ball.random(2, 3, 5, 5, 2).permute(0, 1, 4, 2, 3)
     layer = geoopt_layers.poincare.Distance2PoincareCentroids2d(
         centroid_shape=2, num_centroids=10, ball=ball, squared=squared, zero=zero
@@ -264,8 +244,8 @@ def test_dist_centroids_2d_multi(squared, train, zero, disable):
     "method,train,zero",
     itertools.product(["einstein", "tangent"], [True, False], [True, False]),
 )
-def test_weighted_centroids(method, train, zero, disable):
-    ball = geoopt_layers.poincare.PoincareBall(disable=disable)
+def test_weighted_centroids(method, train, zero, ball):
+
     weights = torch.randn(2, 5, 17)
     layer = geoopt_layers.poincare.WeightedPoincareCentroids(
         7, 17, method=method, ball=ball, zero=zero
@@ -278,8 +258,8 @@ def test_weighted_centroids(method, train, zero, disable):
 @pytest.mark.parametrize(
     "method,train,zero", itertools.product(["tangent"], [True, False], [True, False])
 )
-def test_weighted_centroids_zeros(method, train, zero, disable):
-    ball = geoopt_layers.poincare.PoincareBall(disable=disable)
+def test_weighted_centroids_zeros(method, train, zero, ball):
+
     weights = torch.zeros(2, 5, 17)
     layer = geoopt_layers.poincare.WeightedPoincareCentroids(
         7, 17, method=method, ball=ball, zero=zero
@@ -293,8 +273,8 @@ def test_weighted_centroids_zeros(method, train, zero, disable):
     "method,train,zero",
     itertools.product(["einstein", "tangent"], [True, False], [True, False]),
 )
-def test_weighted_centroids_1d(method, train, zero, disable):
-    ball = geoopt_layers.poincare.PoincareBall(disable=disable)
+def test_weighted_centroids_1d(method, train, zero, ball):
+
     point = ball.random(2, 5, 5, 7).permute(0, 1, 3, 2)
     layer = geoopt_layers.poincare.WeightedPoincareCentroids1d(
         2, 7, method=method, ball=ball, zero=zero
@@ -309,8 +289,8 @@ def test_weighted_centroids_1d(method, train, zero, disable):
     "method,train,zero",
     itertools.product(["einstein", "tangent"], [True, False], [True, False]),
 )
-def test_weighted_centroids_1d_multi(method, train, zero, disable):
-    ball = geoopt_layers.poincare.PoincareBall(disable=disable)
+def test_weighted_centroids_1d_multi(method, train, zero, ball):
+
     point = ball.random(2, 3, 5, 5, 7).permute(0, 1, 2, 4, 3)
     layer = geoopt_layers.poincare.WeightedPoincareCentroids1d(
         2, 7, method=method, ball=ball, zero=zero
@@ -325,8 +305,8 @@ def test_weighted_centroids_1d_multi(method, train, zero, disable):
     "method,train,zero",
     itertools.product(["einstein", "tangent"], [True, False], [True, False]),
 )
-def test_weighted_centroids_2d(method, train, zero, disable):
-    ball = geoopt_layers.poincare.PoincareBall(disable=disable)
+def test_weighted_centroids_2d(method, train, zero, ball):
+
     point = ball.random(2, 5, 5, 7).permute(0, 3, 1, 2)
     layer = geoopt_layers.poincare.WeightedPoincareCentroids2d(
         2, 7, method=method, ball=ball, zero=zero
@@ -341,8 +321,8 @@ def test_weighted_centroids_2d(method, train, zero, disable):
     "method,train,zero",
     itertools.product(["einstein", "tangent"], [True, False], [True, False]),
 )
-def test_weighted_centroids_2d_multi(method, train, zero, disable):
-    ball = geoopt_layers.poincare.PoincareBall(disable=disable)
+def test_weighted_centroids_2d_multi(method, train, zero, ball):
+
     point = ball.random(2, 3, 5, 5, 7).permute(0, 1, 4, 2, 3)
     layer = geoopt_layers.poincare.WeightedPoincareCentroids2d(
         2, 7, method=method, ball=ball, zero=zero
@@ -357,8 +337,8 @@ def test_weighted_centroids_2d_multi(method, train, zero, disable):
     "squared,train,zero,signed",
     itertools.product([True, False], [True, False], [True, False], [True, False]),
 )
-def test_dist_planes_2d(squared, train, zero, signed, disable):
-    ball = geoopt_layers.poincare.PoincareBall(disable=disable)
+def test_dist_planes_2d(squared, train, zero, signed, ball):
+
     point = ball.random(2, 5, 5, 2).permute(0, 3, 1, 2)
     layer = geoopt_layers.poincare.Distance2PoincareHyperplanes2d(
         plane_shape=2,
@@ -377,8 +357,8 @@ def test_dist_planes_2d(squared, train, zero, signed, disable):
     "squared,train,zero,signed",
     itertools.product([True, False], [True, False], [True, False], [True, False]),
 )
-def test_dist_planes(squared, train, zero, signed, disable):
-    ball = geoopt_layers.poincare.PoincareBall(disable=disable)
+def test_dist_planes(squared, train, zero, signed, ball):
+
     point = ball.random(2, 5, 5, 2)
     layer = geoopt_layers.poincare.Distance2PoincareHyperplanes(
         plane_shape=2,
@@ -397,8 +377,8 @@ def test_dist_planes(squared, train, zero, signed, disable):
     "squared,train,zero,signed",
     itertools.product([True, False], [True, False], [True, False], [True, False]),
 )
-def test_dist_planes_1d_multi(squared, train, zero, signed, disable):
-    ball = geoopt_layers.poincare.PoincareBall(disable=disable)
+def test_dist_planes_1d_multi(squared, train, zero, signed, ball):
+
     point = ball.random(2, 3, 5, 5, 2).permute(0, 1, 2, 4, 3)
     layer = geoopt_layers.poincare.Distance2PoincareHyperplanes1d(
         plane_shape=2,
@@ -417,8 +397,9 @@ def test_dist_planes_1d_multi(squared, train, zero, signed, disable):
     "squared,train,zero,signed",
     itertools.product([True, False], [True, False], [True, False], [True, False]),
 )
-def test_dist_planes_2d_multi(squared, train, zero, signed, disable):
-    ball = geoopt_layers.poincare.PoincareBall(disable=disable)
+@torch.no_grad()
+def test_dist_planes_2d_multi(squared, train, zero, signed, ball):
+
     point = ball.random(2, 3, 5, 5, 2).permute(0, 1, 4, 2, 3)
     layer = geoopt_layers.poincare.Distance2PoincareHyperplanes2d(
         plane_shape=2,
@@ -434,8 +415,9 @@ def test_dist_planes_2d_multi(squared, train, zero, signed, disable):
 
 
 @pytest.mark.parametrize("mm", [True, False])
-def test_average_equals_conv(mm, disable):
-    ball = geoopt_layers.poincare.PoincareBall(disable=disable)
+@torch.no_grad()
+def test_average_equals_conv(mm, ball):
+
     conv = geoopt_layers.poincare.MobiusConv2d(5, 3, dim_out=5, ball=ball, matmul=mm)
     with torch.no_grad():
         if mm:
@@ -449,8 +431,9 @@ def test_average_equals_conv(mm, disable):
 
 
 @pytest.mark.parametrize("mm", [True, False])
-def test_weighted_average_equals_conv(mm, disable):
-    ball = geoopt_layers.poincare.PoincareBall(disable=disable)
+@torch.no_grad()
+def test_weighted_average_equals_conv(mm, ball):
+
     conv = geoopt_layers.poincare.MobiusConv2d(5, 3, dim_out=5, ball=ball, matmul=mm)
     with torch.no_grad():
         if mm:
@@ -467,8 +450,9 @@ def test_weighted_average_equals_conv(mm, disable):
 
 
 @pytest.mark.parametrize("mm", [True, False])
-def test_two_points_average_equals_conv(mm, disable):
-    ball = geoopt_layers.poincare.PoincareBall(disable=disable)
+@torch.no_grad()
+def test_two_points_average_equals_conv(mm, ball):
+
     conv = geoopt_layers.poincare.MobiusConv2d(
         5, 3, dim_out=5, points_in=2, ball=ball, matmul=mm
     )
@@ -484,8 +468,9 @@ def test_two_points_average_equals_conv(mm, disable):
 
 
 @pytest.mark.parametrize("mm", [True, False])
-def test_two_points_weighted_average_equals_conv(mm, disable):
-    ball = geoopt_layers.poincare.PoincareBall(disable=disable)
+@torch.no_grad()
+def test_two_points_weighted_average_equals_conv(mm, ball):
+
     conv = geoopt_layers.poincare.MobiusConv2d(
         5, 3, dim_out=5, points_in=2, ball=ball, matmul=mm
     )
@@ -504,8 +489,8 @@ def test_two_points_weighted_average_equals_conv(mm, disable):
     ball.assert_check_point_on_manifold(avg2)
 
 
-def test_random_init_mobius_conv(disable):
-    ball = geoopt_layers.poincare.PoincareBall(disable=disable)
+def test_random_init_mobius_conv(ball):
+
     conv = geoopt_layers.poincare.MobiusConv2d(
         5, 3, dim_out=7, points_in=2, points_out=4, ball=ball
     )
@@ -515,8 +500,8 @@ def test_random_init_mobius_conv(disable):
     ball.assert_check_point_on_manifold(out.permute(0, 1, 3, 4, 2))
 
 
-def test_poincare_mean_scatter(disable):
-    ball = geoopt_layers.poincare.PoincareBall(disable=disable)
+def test_poincare_mean_scatter(ball):
+
     points = ball.random(10, 5, std=1 / 5 ** 0.5)
     means = geoopt_layers.poincare.math.poincare_mean_scatter(
         points, index=torch.tensor([0, 0, 0, 0, 0, 1, 1, 1, 1, 1]), ball=ball
@@ -531,8 +516,7 @@ def test_poincare_mean_scatter(disable):
 @pytest.mark.parametrize(
     "linkomb,method", itertools.product([True, False], ["einstein", "tangent"])
 )
-def test_poincare_mean_scatter_tangent(linkomb, method, disable):
-    ball = geoopt_layers.poincare.PoincareBall(disable=disable)
+def test_poincare_mean_scatter_tangent(linkomb, method, ball):
     points = ball.random(10, 5, std=1 / 5 ** 0.5)
     means = geoopt_layers.poincare.math.poincare_mean_scatter(
         points,
@@ -551,8 +535,8 @@ def test_poincare_mean_scatter_tangent(linkomb, method, disable):
         [100.0, 1.0, 0.05, 0.0], [100.0, 1.0, 0.05, 0.0], [0.1, 0.5, 1.0]
     ),
 )
-def test_noise_layer(alpha, beta, gamma, disable):
-    ball = geoopt_layers.poincare.PoincareBall(disable=disable)
+def test_noise_layer(alpha, beta, gamma, ball):
+
     noise = geoopt_layers.poincare.Noise(alpha, beta, gamma, ball=ball)
     input = ball.random(10, 5)
     output = noise(input)
@@ -562,8 +546,8 @@ def test_noise_layer(alpha, beta, gamma, disable):
 @pytest.mark.parametrize(
     "granularity,grad", itertools.product([0.01, 1, 10], [True, False])
 )
-def test_noise_layer(granularity, grad, disable):
-    ball = geoopt_layers.poincare.PoincareBall(disable=disable)
+def test_noise_layer(granularity, grad, ball):
+
     noise = geoopt_layers.poincare.Discretization(granularity, ball=ball, grad=grad)
     input = ball.random(10, 5)
     output = noise(input)
