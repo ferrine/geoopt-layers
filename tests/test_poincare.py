@@ -68,6 +68,7 @@ def test_linear_new_ball1_origin(ball):
     ball.assert_check_point_on_manifold(out)
 
 
+@pytest.mark.xfail(raises=NotImplementedError)
 def test_avg_pool(ball):
     point = ball.random(2, 5, 5, 2).permute(0, 3, 1, 2)
     layer = geoopt_layers.poincare.MobiusAvgPool2d((3, 3), ball=ball)
@@ -95,6 +96,7 @@ def test_adaptive_max_pool(ball):
     ball.assert_check_point_on_manifold(out.permute(0, 2, 3, 1))
 
 
+@pytest.mark.xfail(raises=NotImplementedError)
 def test_adaptive_avg_pool(ball):
     point = ball.random(2, 5, 5, 2).permute(0, 3, 1, 2)
     layer = geoopt_layers.poincare.MobiusAdaptiveAvgPool2d((2, 2), ball=ball)
@@ -415,6 +417,7 @@ def test_dist_planes_2d_multi(squared, train, zero, signed, ball):
 
 
 @pytest.mark.parametrize("mm", [True, False])
+@pytest.mark.xfail(raises=NotImplementedError)
 @torch.no_grad()
 def test_average_equals_conv(mm, ball):
 
@@ -431,6 +434,7 @@ def test_average_equals_conv(mm, ball):
 
 
 @pytest.mark.parametrize("mm", [True, False])
+@pytest.mark.xfail(raises=NotImplementedError)
 @torch.no_grad()
 def test_weighted_average_equals_conv(mm, ball):
 
@@ -450,6 +454,7 @@ def test_weighted_average_equals_conv(mm, ball):
 
 
 @pytest.mark.parametrize("mm", [True, False])
+@pytest.mark.xfail(raises=NotImplementedError)
 @torch.no_grad()
 def test_two_points_average_equals_conv(mm, ball):
 
@@ -468,6 +473,7 @@ def test_two_points_average_equals_conv(mm, ball):
 
 
 @pytest.mark.parametrize("mm", [True, False])
+@pytest.mark.xfail(raises=NotImplementedError)
 @torch.no_grad()
 def test_two_points_weighted_average_equals_conv(mm, ball):
 
@@ -489,6 +495,7 @@ def test_two_points_weighted_average_equals_conv(mm, ball):
     ball.assert_check_point_on_manifold(avg2)
 
 
+@pytest.mark.xfail(raises=NotImplementedError)
 def test_random_init_mobius_conv(ball):
 
     conv = geoopt_layers.poincare.MobiusConv2d(

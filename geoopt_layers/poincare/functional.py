@@ -48,7 +48,8 @@ def mobius_max_pool2d(
 def mobius_avg_pool2d(
     input, kernel_size, stride=None, padding=0, ceil_mode=False, *, ball
 ):
-    assert torch.all(geoopt.utils.canonical_manifold(ball).k.le(0)), "TODO: Positive"
+    if not torch.all(geoopt.utils.canonical_manifold(ball).k.le(0)):
+        raise NotImplementedError("Not implemented for positive curvature")
     gamma = ball.lambda_x(input, dim=-3, keepdim=True)
     numerator = torch.nn.functional.avg_pool2d(
         input * gamma,
@@ -73,7 +74,8 @@ def mobius_avg_pool2d(
 
 
 def mobius_adaptive_avg_pool2d(input, output_size, *, ball):
-    assert torch.all(geoopt.utils.canonical_manifold(ball).k.le(0)), "TODO: Positive"
+    if not torch.all(geoopt.utils.canonical_manifold(ball).k.le(0)):
+        raise NotImplementedError("Not implemented for positive curvature")
     gamma = ball.lambda_x(input, dim=-3, keepdim=True)
     numerator = torch.nn.functional.adaptive_avg_pool2d(
         input * gamma, output_size=output_size
@@ -196,9 +198,8 @@ def mobius_conv2d(
     assert weight_avg.shape[:2] == (points_out, points_in)
     if ball_out is None:
         ball_out = ball
-    assert torch.all(
-        geoopt.utils.canonical_manifold(ball_out).k.le(0)
-    ), "TODO: Positive"
+    if not torch.all(geoopt.utils.canonical_manifold(ball).k.le(0)):
+        raise NotImplementedError("Not implemented for positive curvature")
     if weight_mm is not None:
         input = ball.logmap0(input, dim=2)
         input = input.transpose(1, 2).reshape(input.shape[0], -1, *input.shape[-2:])
