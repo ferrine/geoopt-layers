@@ -1,6 +1,5 @@
 from typing import Tuple, Union
 import geoopt.utils
-from .utils import idx2sign, prod
 from geoopt_layers.base import ManifoldModule
 from .functional import pairwise_distances
 import torch
@@ -172,7 +171,7 @@ class KNN(KNNIndex):
         if y is None:
             y = x
         idx = super().forward(x, y)
-        dim = idx2sign(self.dim, idx.dim())
+        dim = geoopt.utils.idx2sign(self.dim, idx.dim())
         y = y.unsqueeze(dim)
         idx = idx.view(idx.shape + (1,) * self.manifold.ndim)
         y, idx = torch.broadcast_tensors(y, idx)

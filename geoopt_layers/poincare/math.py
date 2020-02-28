@@ -1,6 +1,6 @@
 from geoopt.utils import size2shape, canonical_manifold
 import torch
-from geoopt.utils import drop_dims
+from geoopt.utils import drop_dims, clamp_abs
 
 __all__ = ["poincare_mean", "poincare_mean", "apply_radial", "poincare_mean_scatter"]
 
@@ -162,11 +162,9 @@ def poincare_mean_einstein_scatter(
         weights = weights.unsqueeze(-1)
         nominator = nominator * weights
         denominator = denominator * weights
-    nominator = torch_scatter.scatter_add(nominator, index, dim, None, dim_size, 0)
-    denominator = torch_scatter.scatter_add(
-        denominator, index, dim, None, dim_size, 1e-5
-    )
-    two_mean = nominator / denominator
+    nominator = torch_scatter.scatter_add(nominator, index, dim, None, dim_size)
+    denominator = torch_scatter.scatter_add(denominator, index, dim, None, dim_size)
+    two_mean = nominator / clamp_abs(denominator, 1e-15)
     a_mean = ball.mobius_scalar_mul(
         torch.tensor(0.5, dtype=two_mean.dtype, device=two_mean.device), two_mean
     )
@@ -178,22 +176,20 @@ def poincare_mean_einstein_scatter(
         b_means = torch.index_select(b_mean, index=index, dim=dim)
         a_dists = ball.dist(a_means, src, keepdim=True)
         b_dists = ball.dist(b_means, src, keepdim=True)
-        a_dist = torch_scatter.scatter_add(a_dists, index, dim, None, dim_size, 0)
-        b_dist = torch_scatter.scatter_add(b_dists, index, dim, None, dim_size, 0)
+        a_dist = torch_scatter.scatter_add(a_dists, index, dim, None, dim_size)
+        b_dist = torch_scatter.scatter_add(b_dists, index, dim, None, dim_size)
         better = k.gt(0) & (b_dist < a_dist)
         a_mean = torch.where(better, b_mean, a_mean)
     if lincomb:
         if weights is None:
             weights = src.new_full((src.size(dim),), 0.5)
         if weights.dim() == 1:
-            alpha = torch_scatter.scatter_add(weights, index, 0, None, dim_size, 0)
+            alpha = torch_scatter.scatter_add(weights, index, 0, None, dim_size)
             shape = [1 for _ in range(two_mean.dim())]
             shape[dim] = -1
             alpha = alpha.view(shape)
         else:
-            alpha = (
-                torch_scatter.scatter_add(weights, index, dim, None, dim_size, 0) / 2
-            )
+            alpha = torch_scatter.scatter_add(weights, index, dim, None, dim_size) / 2
         a_mean = ball.mobius_scalar_mul(alpha, a_mean)
     return a_mean
 
@@ -210,22 +206,23 @@ def poincare_mean_tangent_scatter(
 
     if weights is None:
         if lincomb:
-            result = torch_scatter.scatter_add(log, index, dim, None, dim_size, 0)
+            # src, index, dim, None, dim_size
+            result = torch_scatter.scatter_add(log, index, dim, None, dim_size)
         else:
-            result = torch_scatter.scatter_mean(log, index, dim, None, dim_size, 0)
+            result = torch_scatter.scatter_mean(log, index, dim, None, dim_size)
     elif weights.dim() == 1:
         shape = [1 for _ in range(log.dim())]
         shape[dim] = -1
         weights = weights.view(shape)
-        result = torch_scatter.scatter_add(weights * log, index, dim, None, dim_size, 0)
+        result = torch_scatter.scatter_add(weights * log, index, dim, None, dim_size)
         if not lincomb:
-            denom = torch_scatter.scatter_add(weights, index, dim, None, dim_size, 1e-5)
+            denom = torch_scatter.scatter_add(weights, index, dim, None, dim_size)
             result = result / denom
     else:
         weights = weights.unsqueeze(-1)
-        result = torch_scatter.scatter_add(weights * log, index, dim, None, dim_size, 0)
+        result = torch_scatter.scatter_add(weights * log, index, dim, None, dim_size)
         if not lincomb:
-            denom = torch_scatter.scatter_add(weights, index, dim, None, dim_size, 1e-5)
+            denom = torch_scatter.scatter_add(weights, index, dim, None, dim_size)
             result = result / denom
     if origin is None:
         exp = ball.expmap0(result)

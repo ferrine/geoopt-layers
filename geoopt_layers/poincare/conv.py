@@ -2,7 +2,7 @@ import torch.nn
 from .functional import mobius_conv2d
 from torch.nn.modules.utils import _pair
 from ..base import ManifoldModule
-from ..utils import prod
+import geoopt.utils
 
 
 __all__ = ["MobiusConv2d"]
@@ -97,7 +97,7 @@ class MobiusConv2d(ManifoldModule):
         if self.weight_mm is not None:
             torch.nn.init.eye_(self.weight_mm)
             self.weight_mm.add_(torch.empty_like(self.weight_mm).normal_(0, 1e-3))
-        self.weight_avg.fill_(1 / prod(self.kernel_size))
+        self.weight_avg.fill_(1 / geoopt.utils.prod(self.kernel_size))
 
     def forward(self, input):
         return mobius_conv2d(
