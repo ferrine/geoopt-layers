@@ -14,33 +14,53 @@ def test_linear_same_ball(ball):
     ball.assert_check_point_on_manifold(out)
 
 
-def test_linear_new_ball(ball_1, ball_2):
+def test_tangent_linear_new_ball(ball_1, ball_2):
     point = ball_1.random(2, 3, 5)
-    layer = geoopt_layers.poincare.MobiusLinear(5, 5, ball=ball_1, ball_out=ball_2)
+    layer = geoopt_layers.poincare.MobiusLinear(
+        5, 7, ball=ball_1, ball_out=ball_2, num_basis=9
+    )
     out = layer(point)
 
     ball_2.assert_check_point_on_manifold(out)
 
 
-def test_linear_new_ball1(ball):
+def test_tangent_linear_same_ball(ball):
     point = ball.random(2, 3, 5)
-    layer = geoopt_layers.poincare.MobiusLinear(5, 5, ball=ball, ball_out=ball)
+    layer = geoopt_layers.poincare.MobiusTangentLinear(5, 5, ball=ball)
     out = layer(point)
 
     ball.assert_check_point_on_manifold(out)
 
 
-def test_linear_dim_change(ball):
-    point = ball.random(2, 3, 5)
-    layer = geoopt_layers.poincare.MobiusLinear(5, 3, ball=ball, ball_out=ball)
-    out = layer(point)
-
-    ball.assert_check_point_on_manifold(out)
-
-
-def test_linear_new_ball_origin(ball_1, ball_2):
+def test_tangent_linear_new_ball(ball_1, ball_2):
     point = ball_1.random(2, 3, 5)
-    layer = geoopt_layers.poincare.MobiusLinear(
+    layer = geoopt_layers.poincare.MobiusTangentLinear(
+        5, 5, ball=ball_1, ball_out=ball_2
+    )
+    out = layer(point)
+
+    ball_2.assert_check_point_on_manifold(out)
+
+
+def test_tangent_linear_new_ball1(ball):
+    point = ball.random(2, 3, 5)
+    layer = geoopt_layers.poincare.MobiusTangentLinear(5, 5, ball=ball, ball_out=ball)
+    out = layer(point)
+
+    ball.assert_check_point_on_manifold(out)
+
+
+def test_tangent_linear_dim_change(ball):
+    point = ball.random(2, 3, 5)
+    layer = geoopt_layers.poincare.MobiusTangentLinear(5, 3, ball=ball, ball_out=ball)
+    out = layer(point)
+
+    ball.assert_check_point_on_manifold(out)
+
+
+def test_tangent_linear_new_ball_origin(ball_1, ball_2):
+    point = ball_1.random(2, 3, 5)
+    layer = geoopt_layers.poincare.MobiusTangentLinear(
         5, 5, ball=ball_1, ball_out=ball_2, learn_origin=True
     )
     out = layer(point)
@@ -48,9 +68,9 @@ def test_linear_new_ball_origin(ball_1, ball_2):
     ball_2.assert_check_point_on_manifold(out)
 
 
-def test_linear_new_ball0_origin(ball_1, ball_2):
+def test_tangent_linear_new_ball0_origin(ball_1, ball_2):
     point = ball_1.random(2, 3, 5)
-    layer = geoopt_layers.poincare.MobiusLinear(
+    layer = geoopt_layers.poincare.MobiusTangentLinear(
         5, 7, ball=ball_1, ball_out=ball_2, learn_origin=True
     )
     out = layer(point)
@@ -58,9 +78,9 @@ def test_linear_new_ball0_origin(ball_1, ball_2):
     ball_2.assert_check_point_on_manifold(out)
 
 
-def test_linear_new_ball1_origin(ball):
+def test_tangent_linear_new_ball1_origin(ball):
     point = ball.random(2, 3, 5)
-    layer = geoopt_layers.poincare.MobiusLinear(
+    layer = geoopt_layers.poincare.MobiusTangentLinear(
         5, 5, ball=ball, ball_out=ball, learn_origin=True
     )
     out = layer(point)

@@ -20,6 +20,7 @@ class Distance2PoincareHyperplanes(ManifoldModule):
         num_planes: int,
         signed=True,
         squared=False,
+        scaled=True,
         *,
         ball,
         std=1.0,
@@ -34,6 +35,10 @@ class Distance2PoincareHyperplanes(ManifoldModule):
         self.points = geoopt.ManifoldParameter(
             torch.empty(num_planes - zero, plane_shape), manifold=self.ball
         )
+        self.tangents = geoopt.ManifoldParameter(
+            torch.empty(num_planes - zero, plane_shape), manifold=self.ball
+        )
+        self.scaled = scaled
         self.zero = zero
         self.std = std
         self.reset_parameters()
@@ -44,7 +49,12 @@ class Distance2PoincareHyperplanes(ManifoldModule):
         points = points.view(points.shape + (1,) * self.n)
 
         distance = self.ball.dist2plane(
-            x=input_p, p=points, a=points, signed=self.signed, dim=-self.n - 2
+            x=input_p,
+            p=points,
+            a=points,
+            signed=self.signed,
+            dim=-self.n - 2,
+            scaled=self.scaled,
         )
         if self.squared and self.signed:
             sign = distance.sign()

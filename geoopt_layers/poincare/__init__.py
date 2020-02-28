@@ -1,3 +1,4 @@
+from .tangent_linear import MobiusTangentLinear
 from .linear import MobiusLinear
 from .pooling import (
     MobiusAdaptiveAvgPool2d,

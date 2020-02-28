@@ -1,94 +1,98 @@
+from ..base import ManifoldModule
+from .hyperplanes import Distance2PoincareHyperplanes
+from .centroids import WeightedPoincareCentroids
 import torch.nn
-import geoopt
-
-from geoopt_layers.poincare.functional import mobius_linear
-from geoopt_layers.base import ManifoldModule
-
-__all__ = ["MobiusLinear"]
 
 
-class MobiusLinear(torch.nn.Linear, ManifoldModule):
-    """
-    Hyperbolic Linear Layer.
+class MobiusLinear(ManifoldModule):
+    r"""
+    Mobius Linear layer with nonlinearity that is based on distance to hyperplanes.
 
-    The layer performs
+    The main idea befind the funtional form is the following.
 
-    1. Linear transformation in the tangent space of the origin in the input manifold
-    2. Depending on the output manifold, performs either parallel translation to the new origin
-    3. Does exponential map from the new origin into the new Manifold
+    Conventional Euclidean Linear layer may be represented as
 
-    There are some conventions that should be taken in account:
+    .. math::
 
-    - If instances of `ball` and `ball_out` are the same, then input and output manifolds are assumed to be the same.
-        In this case it is required to perform parallel transport between tangent spaces of origins. In other case, the
-        resulting tangent vector (after Linear transformation) is mapped directly to the
-        new Manifold without parallel transport.
-    - If input and output manifolds are the same, it is required to have same input and output dimension. Please create
-        new instance of :class:`PoincareBall` if you want to change the dimension.
+            y = Ax + b
+
+    However, in regular neural networks linear operation is usually followed by batch norm and nonlinearity.
+    In naive generalization of linear layer to hyperbolic space it is non obvious how to introduce these operations.
+    Instead let's rewrite the operation in the following way:
+
+    .. math::
+
+        y_i = H_{A_i,b_i}(x),
+
+    where :math:`H_{A_i,b_i}` is a distance to hyperplane. However, this is still not enough to fully satisfy
+    the presence of batch norm and nonlinearity. WHat is missing is basis for output. By default euclidean
+    linear layer considers canonical basis. We can introduce is explicitly simplifying the transition to
+    hyperbolic generalization.
+
+    ..math::
+
+        y = \sum_i f_i(H_{A_i,b_i}(x)) e_i,
+
+    where :math:`f_i` is an arbitrary nonlinearity. acting solely in :math:`\mathrm{R}` domain. Basis :math:`e_i`
+    is weighted in a linear combination. Once we generalize distance to a hyperplane and linear combination,
+    we are ready to write down the formula for hyperbolic linear layer.
+
+    ..math::
+
+        y = \left(\sum_i f_i(H_{A_i,b_i}(x)) \right) \odot
+            \operatorname{Mid}\left\{
+                \left( f_i(H_{A_i,b_i}(x)), e_i \right)
+            \right\},
+
+    where :math:`y, e_i \in H_\kappa^O`, :math:`x \in H_\kappa^I`
 
     Parameters
     ----------
     in_features : int
         input dimension
-    out_features : int
+    out_features :
         output dimension
-    bias : bool
-        add bias?
-    ball : geoopt.PoincareBall
-        incoming manifold
-    ball_out : Optional[geoopt.PoincareBall]
-        output manifold
-    learn_origin : bool
-        add learnable origins for logmap and expmap?
-
-    Notes
-    -----
-    We could do this subclassing RemapLambda, but with default origin the implementation is faster.
+    nonlinearity :
+        nonlinearity for distances. May be arbitrary, just pass batch norm or dropout there too.
+    ball : Manifold
+    ball_out : Optional[Manifold]
+    num_basis : Optional[int]
+        number of basis vectors
     """
 
     def __init__(
         self,
         in_features,
         out_features,
-        bias=True,
+        nonlinearity=torch.nn.Identity(),
         *,
-        ball: geoopt.PoincareBall,
+        ball,
         ball_out=None,
-        learn_origin=False,
+        num_basis=None
     ):
-        # for manifolds that have parameters like Poincare Ball
-        # we have to attach them to the closure Module.
-        # It is hard to implement device allocation for manifolds in other case.
+        super().__init__()
         if ball_out is None:
             ball_out = ball
-        super().__init__(in_features=in_features, out_features=out_features, bias=bias)
-        self.ball = ball
-        self.ball_out = ball_out
-        if self.bias is not None:
-            self.bias = geoopt.ManifoldParameter(self.bias, manifold=self.ball_out)
-        if learn_origin:
-            self.source_origin = geoopt.ManifoldParameter(self.ball.origin(in_features))
-            self.target_origin = geoopt.ManifoldParameter(
-                self.ball_out.origin(out_features)
-            )
-        else:
-            self.register_buffer("source_origin", None)
-            self.register_buffer("target_origin", None)
-        self.reset_parameters()
-
-    def forward(self, input):
-        return mobius_linear(
-            input,
-            weight=self.weight,
-            bias=self.bias,
-            ball=self.ball,
-            ball_out=self.ball_out,
-            source_origin=self.source_origin,
-            target_origin=self.target_origin,
+        if num_basis is None:
+            num_basis = out_features
+        self.in_features = in_features
+        self.out_features = out_features
+        self.hyperplanes = Distance2PoincareHyperplanes(
+            in_features, num_basis, ball=ball
         )
+        self.basis = WeightedPoincareCentroids(out_features, num_basis, ball=ball_out)
+        self.nonlinearity = nonlinearity
+        self.reset_parameters()
 
     @torch.no_grad()
     def reset_parameters(self):
-        super().reset_parameters()
-        if self.bias is not None:
-            self.bias.zero_()
+        n = min(self.out_features, self.num_centroids)
+        k = self.out_features
+        self.basis.centroids[:n] = torch.eye(
+            n, k, device=self.basis.centroids.device, dtype=self.basis.centroids.dtype
+        )
+
+    def forward(self, input):
+        distances = self.hyperplanes(input)
+        activations = self.nonlinearity(distances)
+        return self.basis(activations)
