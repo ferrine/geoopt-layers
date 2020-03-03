@@ -14,7 +14,7 @@ def test_linear_same_ball(ball):
     ball.assert_check_point_on_manifold(out)
 
 
-def test_tangent_linear_new_ball(ball_1, ball_2):
+def test_linear_new_ball(ball_1, ball_2):
     point = ball_1.random(2, 3, 5)
     layer = geoopt_layers.poincare.MobiusLinear(
         5, 7, ball=ball_1, ball_out=ball_2, num_basis=9
@@ -356,19 +356,14 @@ def test_weighted_centroids_2d_multi(method, train, zero, ball):
 
 
 @pytest.mark.parametrize(
-    "squared,train,zero,signed",
-    itertools.product([True, False], [True, False], [True, False], [True, False]),
+    "squared,train,signed",
+    itertools.product([True, False], [True, False], [True, False]),
 )
 def test_dist_planes_2d(squared, train, zero, signed, ball):
 
     point = ball.random(2, 5, 5, 2).permute(0, 3, 1, 2)
     layer = geoopt_layers.poincare.Distance2PoincareHyperplanes2d(
-        plane_shape=2,
-        num_planes=10,
-        ball=ball,
-        squared=squared,
-        zero=zero,
-        signed=signed,
+        plane_shape=2, num_planes=10, ball=ball, squared=squared, signed=signed,
     ).train(train)
     out = layer(point)
     assert not torch.isnan(out).any()
@@ -376,19 +371,14 @@ def test_dist_planes_2d(squared, train, zero, signed, ball):
 
 
 @pytest.mark.parametrize(
-    "squared,train,zero,signed",
-    itertools.product([True, False], [True, False], [True, False], [True, False]),
+    "squared,train,signed",
+    itertools.product([True, False], [True, False], [True, False]),
 )
-def test_dist_planes(squared, train, zero, signed, ball):
+def test_dist_planes(squared, train, signed, ball):
 
     point = ball.random(2, 5, 5, 2)
     layer = geoopt_layers.poincare.Distance2PoincareHyperplanes(
-        plane_shape=2,
-        num_planes=10,
-        ball=ball,
-        squared=squared,
-        zero=zero,
-        signed=signed,
+        plane_shape=2, num_planes=10, ball=ball, squared=squared, signed=signed,
     ).train(train)
     out = layer(point)
     assert not torch.isnan(out).any()
@@ -396,19 +386,14 @@ def test_dist_planes(squared, train, zero, signed, ball):
 
 
 @pytest.mark.parametrize(
-    "squared,train,zero,signed",
-    itertools.product([True, False], [True, False], [True, False], [True, False]),
+    "squared,train,signed",
+    itertools.product([True, False], [True, False], [True, False]),
 )
-def test_dist_planes_1d_multi(squared, train, zero, signed, ball):
+def test_dist_planes_1d_multi(squared, train, signed, ball):
 
     point = ball.random(2, 3, 5, 5, 2).permute(0, 1, 2, 4, 3)
     layer = geoopt_layers.poincare.Distance2PoincareHyperplanes1d(
-        plane_shape=2,
-        num_planes=10,
-        ball=ball,
-        squared=squared,
-        zero=zero,
-        signed=signed,
+        plane_shape=2, num_planes=10, ball=ball, squared=squared, signed=signed,
     ).train(train)
     out = layer(point)
     assert not torch.isnan(out).any()
@@ -416,20 +401,15 @@ def test_dist_planes_1d_multi(squared, train, zero, signed, ball):
 
 
 @pytest.mark.parametrize(
-    "squared,train,zero,signed",
-    itertools.product([True, False], [True, False], [True, False], [True, False]),
+    "squared,train,signed",
+    itertools.product([True, False], [True, False], [True, False]),
 )
 @torch.no_grad()
-def test_dist_planes_2d_multi(squared, train, zero, signed, ball):
+def test_dist_planes_2d_multi(squared, train, signed, ball):
 
     point = ball.random(2, 3, 5, 5, 2).permute(0, 1, 4, 2, 3)
     layer = geoopt_layers.poincare.Distance2PoincareHyperplanes2d(
-        plane_shape=2,
-        num_planes=10,
-        ball=ball,
-        squared=squared,
-        zero=zero,
-        signed=signed,
+        plane_shape=2, num_planes=10, ball=ball, squared=squared, signed=signed,
     ).train(train)
     out = layer(point)
     assert not torch.isnan(out).any()
@@ -536,8 +516,8 @@ def test_poincare_mean_scatter(ball):
     assert means.shape == (2, 5)
     mean_1 = geoopt_layers.poincare.math.poincare_mean(points[:5], ball=ball)
     mean_2 = geoopt_layers.poincare.math.poincare_mean(points[5:], ball=ball)
-    np.testing.assert_allclose(means[0], mean_1, atol=1e-5)
-    np.testing.assert_allclose(means[1], mean_2, atol=1e-5)
+    np.testing.assert_allclose(means[0].detach(), mean_1.detach(), atol=1e-5)
+    np.testing.assert_allclose(means[1].detach(), mean_2.detach(), atol=1e-5)
 
 
 @pytest.mark.parametrize(
@@ -579,3 +559,16 @@ def test_noise_layer(granularity, grad, ball):
     input = ball.random(10, 5)
     output = noise(input)
     ball.assert_check_point_on_manifold(output)
+
+
+def test_linear_layer_matches_euclidean():
+    ball = geoopt.Stereographic(k=0.0)
+    linear = torch.nn.Linear(10, 15)
+    hyp_linear = geoopt_layers.poincare.MobiusLinear.from_linear(linear, ball=ball)
+    input = torch.randn(3, 10)
+    output_euclidean = linear(input)
+    output_hyperbolic = hyp_linear(input)
+    #  with K=0 we should expect output matches
+    np.testing.assert_allclose(
+        output_euclidean.detach(), output_hyperbolic.detach(), atol=1e-6
+    )

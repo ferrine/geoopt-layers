@@ -34,8 +34,8 @@ class Distance2PoincareHyperplanes(ManifoldModule):
         self.points = geoopt.ManifoldParameter(
             torch.empty(num_planes, plane_shape), manifold=self.ball
         )
-        self.tangents = geoopt.ManifoldParameter(
-            torch.empty(num_planes, plane_shape)
+        self.tangents = torch.nn.Parameter(
+            torch.empty(num_planes, plane_shape), requires_grad=True
         )
         self.scaled = scaled
         self.std = std
@@ -62,9 +62,8 @@ class Distance2PoincareHyperplanes(ManifoldModule):
         return distance
 
     def extra_repr(self):
-        return (
-            "plane_shape={plane_shape}, "
-            "num_planes={num_planes}".format(**self.__dict__)
+        return "plane_shape={plane_shape}, " "num_planes={num_planes}".format(
+            **self.__dict__
         )
 
     @torch.no_grad()
@@ -78,14 +77,16 @@ class Distance2PoincareHyperplanes(ManifoldModule):
     @torch.no_grad()
     def set_parameters_from_linear_operator(self, A, b=None):
         assert A.shape == (self.num_planes, self.plane_shape[0])
-        tangents = A / 2
+        tangents = A
         if b is None:
             points = torch.zeros_like(tangents)
         else:
-            points = b.unsqueeze(-1) * tangents / tangents.pow(2).sum(keepdims=True, dim=-1)
+            points = (
+                -b.unsqueeze(-1) * tangents / tangents.pow(2).sum(keepdims=True, dim=-1)
+            )
             points = self.ball.expmap0(points)
         self.points.set_(points)
-        self.tangents.set_(tangents)
+        self.tangents.set_(tangents / 2)
 
     def set_parameters_from_linear_layer(self, linear):
         self.set_parameters_from_linear_operator(linear.weight, linear.bias)
