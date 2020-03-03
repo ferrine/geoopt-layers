@@ -75,18 +75,19 @@ class MobiusLinear(ManifoldModule):
             ball_out = ball
         if num_basis is None:
             num_basis = out_features
+        self.num_basis = num_basis
         self.in_features = in_features
         self.out_features = out_features
         self.hyperplanes = Distance2PoincareHyperplanes(
-            in_features, num_basis, ball=ball
+            in_features, num_basis, ball=ball, scaled=True, squared=False
         )
-        self.basis = WeightedPoincareCentroids(out_features, num_basis, ball=ball_out)
+        self.basis = WeightedPoincareCentroids(out_features, num_basis, ball=ball_out, lincomb=True)
         self.nonlinearity = nonlinearity
         self.reset_parameters()
 
     @torch.no_grad()
     def reset_parameters(self):
-        n = min(self.out_features, self.num_centroids)
+        n = min(self.out_features, self.num_basis)
         k = self.out_features
         self.basis.centroids[:n] = torch.eye(
             n, k, device=self.basis.centroids.device, dtype=self.basis.centroids.dtype
@@ -96,3 +97,10 @@ class MobiusLinear(ManifoldModule):
         distances = self.hyperplanes(input)
         activations = self.nonlinearity(distances)
         return self.basis(activations)
+
+    def set_parameters_from_linear_operator(self, A, b=None):
+        self.hyperplanes.set_parameters_from_linear_operator(A, b)
+        self.reset_parameters()
+
+    def set_parameters_from_linear_layer(self, linear):
+        self.set_parameters_from_linear_operator(linear.weight, linear.bias)

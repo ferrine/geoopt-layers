@@ -24,7 +24,6 @@ class Distance2PoincareHyperplanes(ManifoldModule):
         *,
         ball,
         std=1.0,
-        zero=False
     ):
         super().__init__()
         self.signed = signed
@@ -33,25 +32,24 @@ class Distance2PoincareHyperplanes(ManifoldModule):
         self.plane_shape = geoopt.utils.size2shape(plane_shape)
         self.num_planes = num_planes
         self.points = geoopt.ManifoldParameter(
-            torch.empty(num_planes - zero, plane_shape), manifold=self.ball
+            torch.empty(num_planes, plane_shape), manifold=self.ball
         )
         self.tangents = geoopt.ManifoldParameter(
-            torch.empty(num_planes - zero, plane_shape), manifold=self.ball
+            torch.empty(num_planes, plane_shape)
         )
         self.scaled = scaled
-        self.zero = zero
         self.std = std
         self.reset_parameters()
 
     def forward(self, input):
         input_p = input.unsqueeze(-self.n - 1)
         points = self.points.permute(1, 0)
-        points = points.view(points.shape + (1,) * self.n)
+        tangents = self.tangents.permute(1, 0)
 
         distance = self.ball.dist2plane(
             x=input_p,
             p=points,
-            a=points,
+            a=tangents,
             signed=self.signed,
             dim=-self.n - 2,
             scaled=self.scaled,
@@ -61,26 +59,36 @@ class Distance2PoincareHyperplanes(ManifoldModule):
             distance = distance ** 2 * sign
         elif self.squared:
             distance = distance ** 2
-        if self.zero:
-            distance_zero = self.ball.dist0(input, dim=-self.n - 1, keepdim=True)
-            if self.squared:
-                distance_zero = distance_zero ** 2
-            distance = torch.cat([distance_zero, distance], dim=-self.n - 1)
         return distance
 
     def extra_repr(self):
         return (
             "plane_shape={plane_shape}, "
-            "num_planes={num_planes}, "
-            "zero={zero}, ".format(**self.__dict__)
+            "num_planes={num_planes}".format(**self.__dict__)
         )
 
     @torch.no_grad()
     def reset_parameters(self):
         direction = torch.randn_like(self.points)
         direction /= direction.norm(dim=-1, keepdim=True)
-        distance = torch.empty_like(self.points[..., 0]).normal_(std=self.std)
-        self.points.set_(self.ball.expmap0(direction * distance.unsqueeze(-1)))
+        distance = torch.empty_like(self.points[..., :1]).normal_(std=self.std)
+        self.points.set_(self.ball.expmap0(direction * distance))
+        self.tangents.set_(self.points.clone())
+
+    @torch.no_grad()
+    def set_parameters_from_linear_operator(self, A, b=None):
+        assert A.shape == (self.num_planes, self.plane_shape[0])
+        tangents = A / 2
+        if b is None:
+            points = torch.zeros_like(tangents)
+        else:
+            points = b.unsqueeze(-1) * tangents / tangents.pow(2).sum(keepdims=True, dim=-1)
+            points = self.ball.expmap0(points)
+        self.points.set_(points)
+        self.tangents.set_(tangents)
+
+    def set_parameters_from_linear_layer(self, linear):
+        self.set_parameters_from_linear_operator(linear.weight, linear.bias)
 
 
 class Distance2PoincareHyperplanes1d(Distance2PoincareHyperplanes):
