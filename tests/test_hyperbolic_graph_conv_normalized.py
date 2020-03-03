@@ -21,13 +21,8 @@ def test_graph_conv(aggr_method, bias, sizes, weighted, local, ball_1, ball_2):
     else:
         edge_weight = None
     x = ball_1.random(3, 5)
-    out = HyperbolicGCNConv(
-        *sizes,
-        aggr_method=aggr_method,
-        bias=bias,
-        ball=ball_1,
-        ball_out=ball_2,
-        local=local
-    )(x, edge_index, edge_weight=edge_weight)
+    out = HyperbolicGCNConv(*sizes, ball=ball_1, ball_out=ball_2, local=local)(
+        x, edge_index, edge_weight=edge_weight
+    )
     assert out.shape == (3, sizes[-1])
     ball_2.assert_check_point_on_manifold(out)

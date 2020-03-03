@@ -359,7 +359,7 @@ def test_weighted_centroids_2d_multi(method, train, zero, ball):
     "squared,train,signed",
     itertools.product([True, False], [True, False], [True, False]),
 )
-def test_dist_planes_2d(squared, train, zero, signed, ball):
+def test_dist_planes_2d(squared, train, signed, ball):
 
     point = ball.random(2, 5, 5, 2).permute(0, 3, 1, 2)
     layer = geoopt_layers.poincare.Distance2PoincareHyperplanes2d(

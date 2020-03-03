@@ -43,8 +43,8 @@ class Distance2PoincareHyperplanes(ManifoldModule):
 
     def forward(self, input):
         input_p = input.unsqueeze(-self.n - 1)
-        points = self.points.permute(1, 0)
-        tangents = self.tangents.permute(1, 0)
+        points = self.points.view(self.points.shape + (1,) * self.n).transpose(1, 0)
+        tangents = self.tangents.view(self.points.shape + (1,) * self.n).transpose(1, 0)
 
         distance = self.ball.dist2plane(
             x=input_p,
@@ -62,7 +62,7 @@ class Distance2PoincareHyperplanes(ManifoldModule):
         return distance
 
     def extra_repr(self):
-        return "plane_shape={plane_shape}, " "num_planes={num_planes}".format(
+        return "plane_shape={plane_shape}, num_planes={num_planes}".format(
             **self.__dict__
         )
 

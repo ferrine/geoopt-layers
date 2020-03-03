@@ -23,13 +23,7 @@ def test_graph_conv(aggr, aggr_method, bias, local, sizes, weighted, ball_1, bal
         edge_weight = None
     x = ball_1.random(3, 5)
     out = HyperbolicGraphConv(
-        *sizes,
-        aggr=aggr,
-        aggr_method=aggr_method,
-        bias=bias,
-        local=local,
-        ball=ball_1,
-        ball_out=ball_2
+        *sizes, aggr=aggr, local=local, ball=ball_1, ball_out=ball_2
     )(x, edge_index, size=(3, 3), edge_weight=edge_weight)
     assert out.shape == (3, sizes[-1])
     ball_2.assert_check_point_on_manifold(out)

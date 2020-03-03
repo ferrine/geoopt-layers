@@ -9,10 +9,10 @@ import collections
 import inspect
 
 try:
-    from torch_spline_conv import SplineBasis, SplineWeighting
+    from torch_spline_conv import spline_basis, spline_weighting
 except ImportError:
-    SplineBasis = None
-    SplineWeighting = None
+    spline_basis = None
+    spline_weighting = None
 
 
 class HyperbolicSplineConv(HyperbolicMessagePassing):
@@ -86,7 +86,7 @@ class HyperbolicSplineConv(HyperbolicMessagePassing):
         )
         self.ball_in = ball
         self.ball_out = ball_out
-        if SplineBasis is None:
+        if spline_basis is None:
             raise ImportError("`HyperbolicSplineConv` requires `torch-spline-conv`.")
 
         self.in_channels = in_channels
@@ -214,21 +214,21 @@ class HyperbolicSplineConv(HyperbolicMessagePassing):
     def message(self, x_i=None, x_j=None, log_x_j=None, pseudo=None):
         if self.local:
             log_xi_x_j = self.ball.logmap(x_i, x_j)
-            data = SplineBasis.apply(
+            data = spline_basis(
                 pseudo,
                 self._buffers["kernel_size"],
                 self._buffers["is_open_spline"],
                 self.degree,
             )
-            log_z_j = SplineWeighting.apply(log_xi_x_j, self.weight, *data)
+            log_z_j = spline_weighting(log_xi_x_j, self.weight, *data)
         else:
-            data = SplineBasis.apply(
+            data = spline_basis(
                 pseudo,
                 self._buffers["kernel_size"],
                 self._buffers["is_open_spline"],
                 self.degree,
             )
-            log_z_j = SplineWeighting.apply(log_x_j, self.weight, *data)
+            log_z_j = spline_weighting(log_x_j, self.weight, *data)
         return self.ball_out.expmap0(log_z_j)
 
     def update(self, aggr_out, log_x, x):

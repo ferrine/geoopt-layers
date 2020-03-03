@@ -1,10 +1,11 @@
-from .message_passing import HyperbolicMessagePassing
+from torch_geometric.nn.conv.message_passing import MessagePassing
+from .. import Distance2PoincareHyperplanes, WeightedPoincareCentroids
 import torch
 import collections
 import inspect
 
 
-class HyperbolicGraphConv(HyperbolicMessagePassing):
+class HyperbolicGraphConv(MessagePassing):
     r"""The graph neural network operator from the `"Weisfeiler and Leman Go
     Neural: Higher-order Graph Neural Networks"
     <https://arxiv.org/abs/1810.02244>`_ paper
@@ -18,19 +19,20 @@ class HyperbolicGraphConv(HyperbolicMessagePassing):
         self,
         in_channels,
         out_channels,
-        aggr="sum",
-        bias=True,
+        aggr="add",
         *,
+        num_basis=None,
         ball,
         ball_out=None,
         local=False,
-        aggr_method="einstein",
+        nonlinearity=torch.nn.Identity(),
     ):
         if ball_out is None:
             ball_out = ball
-        super(HyperbolicGraphConv, self).__init__(
-            aggr=aggr, ball=ball_out, aggr_method=aggr_method
-        )
+        super(HyperbolicGraphConv, self).__init__(aggr=aggr)
+        if num_basis is None:
+            num_basis = out_channels
+        self.num_basis = num_basis
         self.ball_in = ball
         self.ball_out = ball_out
         self.in_channels = in_channels
@@ -45,6 +47,9 @@ class HyperbolicGraphConv(HyperbolicMessagePassing):
                     "x_j": inspect.Parameter(
                         "x_j", inspect.Parameter.POSITIONAL_OR_KEYWORD
                     ),
+                    "edge_weight": inspect.Parameter(
+                        "edge_weight", inspect.Parameter.POSITIONAL_OR_KEYWORD
+                    ),
                 }
             )  # ["x_i", "x_j"]
         else:
@@ -52,64 +57,55 @@ class HyperbolicGraphConv(HyperbolicMessagePassing):
                 {
                     "h_j": inspect.Parameter(
                         "h_j", inspect.Parameter.POSITIONAL_OR_KEYWORD
-                    )
+                    ),
+                    "edge_weight": inspect.Parameter(
+                        "edge_weight", inspect.Parameter.POSITIONAL_OR_KEYWORD
+                    ),
                 }
             )  # ["h_j"]
-        self.weight_neighbors = torch.nn.Parameter(
-            torch.empty(in_channels, out_channels), requires_grad=True
+        self.hyperplanes_loop = Distance2PoincareHyperplanes(
+            in_channels, num_basis, ball=ball, scaled=True, squared=False
         )
-        self.weight_loop = torch.nn.Parameter(
-            torch.empty(in_channels, out_channels), requires_grad=True
+        self.hyperplanes_neighbors = Distance2PoincareHyperplanes(
+            in_channels, num_basis, ball=ball, scaled=True, squared=False
         )
-        self.register_origin(
-            "bias",
-            self.ball_out,
-            origin_shape=out_channels,
-            parameter=True,
-            none=not bias,
+        self.basis = WeightedPoincareCentroids(
+            out_channels, num_basis, ball=ball_out, lincomb=True
         )
-
+        self.nonlinearity = nonlinearity
         self.reset_parameters()
 
     @torch.no_grad()
     def reset_parameters(self):
-        torch.nn.init.xavier_uniform_(self.weight_loop)
-        torch.nn.init.xavier_uniform_(self.weight_neighbors)
-        if self.bias is not None:
-            self.bias.zero_()
+        n = min(self.out_channels, self.num_basis)
+        k = self.out_channels
+        self.basis.centroids[:n] = torch.eye(
+            n, k, device=self.basis.centroids.device, dtype=self.basis.centroids.dtype
+        )
 
     def forward(self, x, edge_index, edge_weight=None, size=None):
         """"""
-        y = self.ball.logmap0(x)
-        y = y @ self.weight_loop
-        y = self.ball_out.expmap0(y)
         if self.local:
-            return self.propagate(
-                edge_index, size=size, y=y, x=x, edge_weight=edge_weight
-            )
+            return self.propagate(edge_index, size=size, x=x, edge_weight=edge_weight)
         else:
-            h = self.ball.logmap0(x)
-            h = h @ self.weight_neighbors
-            h = self.ball_out.expmap0(h)
+            h = self.hyperplanes_neighbors(x)
             return self.propagate(
-                edge_index, size=size, y=y, x=x, h=h, edge_weight=edge_weight
+                edge_index, size=size, x=x, h=h, edge_weight=edge_weight
             )
 
-    def message(self, x_i=None, x_j=None, h_j=None):
+    def message(self, x_i=None, x_j=None, h_j=None, edge_weight=None):
         if self.local:
-            h_j = self.ball.logmap(x_i, x_j)
-            h_j = h_j @ self.weight_neighbors
-            return self.ball_out.expmap0(h_j)
-        else:
-            return h_j
+            xr_j = self.ball_in.mobius_add(-x_i, x_j)
+            h_j = self.hyperplanes_neighbors(xr_j)
+        return h_j if edge_weight is None else edge_weight.view(-1, 1) * h_j
 
-    def update(self, aggr_out, y):
-        aggr_out = self.ball_out.mobius_add(y, aggr_out)
-        if self.bias is not None:
-            aggr_out = self.ball_out.mobius_add(aggr_out, self.bias)
-        return aggr_out
+    def update(self, aggr_out, x):
+        y = self.hyperplanes_loop(x)
+        aggr_out = aggr_out + y
+        activations = self.nonlinearity(aggr_out)
+        return self.basis(activations)
 
     def extra_repr(self) -> str:
-        return "{} -> {}, local={local}, aggr={aggr}, aggr_method={aggr_method}".format(
+        return "{} -> {}, local={local}, aggr={aggr}".format(
             self.in_channels, self.out_channels, **self.__dict__
         )

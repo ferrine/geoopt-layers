@@ -19,21 +19,11 @@ from geoopt_layers.poincare.graph import HyperbolicSplineConv
         [True, False],  # local
     ),
 )
-def test_spline_conv(
-    bias,
-    sizes,
-    kernel_size,
-    degree,
-    root_weight,
-    dim,
-    local,
-    disable1,
-    disable2,
-    ball_1,
-    ball_2,
+def test_spline_conv_1(
+    bias, sizes, kernel_size, degree, root_weight, dim, local, ball_1, ball_2,
 ):
     edge_index = torch.tensor([[0, 0, 0, 1, 2, 3, 0], [1, 2, 3, 0, 0, 0, 0]])
-    x = ball.random(4, 5)
+    x = ball_1.random(4, 5)
     pseudo = torch.rand(edge_index.size(1), dim)
     should_pass = not (sizes[0] != sizes[1] and local and not root_weight)
     if should_pass:
@@ -56,8 +46,8 @@ def test_spline_conv(
             HyperbolicSplineConv(
                 *sizes,
                 bias=bias,
-                ball=ball,
-                ball_out=ball_out,
+                ball=ball_1,
+                ball_out=ball_2,
                 kernel_size=kernel_size,
                 degree=degree,
                 root_weight=root_weight,
