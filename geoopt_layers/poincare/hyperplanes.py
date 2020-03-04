@@ -74,9 +74,8 @@ class Distance2PoincareHyperplanes(ManifoldModule):
         self.points.set_(self.ball.expmap0(direction * distance))
         self.tangents.set_(self.points.clone())
 
-    @torch.no_grad()
-    def set_parameters_from_linear_operator(self, A, b=None):
-        assert A.shape == (self.num_planes, self.plane_shape[0])
+    @staticmethod
+    def hyperplane_from_linear_operator(A, b=None):
         tangents = A
         if b is None:
             points = torch.zeros_like(tangents)
@@ -84,9 +83,15 @@ class Distance2PoincareHyperplanes(ManifoldModule):
             points = (
                 -b.unsqueeze(-1) * tangents / tangents.pow(2).sum(keepdims=True, dim=-1)
             )
-            points = self.ball.expmap0(points)
+        return points, tangents / 2
+
+    @torch.no_grad()
+    def set_parameters_from_linear_operator(self, A, b=None):
+        assert A.shape == (self.num_planes, self.plane_shape[0])
+        points, tangents = self.hyperplane_from_linear_operator(A, b)
+        points = self.ball.expmap0(points)
         self.points.set_(points)
-        self.tangents.set_(tangents / 2)
+        self.tangents.set_(tangents)
 
     def set_parameters_from_linear_layer(self, linear):
         self.set_parameters_from_linear_operator(linear.weight, linear.bias)
