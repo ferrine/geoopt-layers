@@ -160,11 +160,10 @@ class HyperbolicGCNConv(torch_geometric.nn.conv.MessagePassing):
 
     @torch.no_grad()
     def set_parameters_from_gcn_conv(self, gcn_conv: torch_geometric.nn.conv.GCNConv):
+        self.reset_parameters()
         self.hyperplanes.set_parameters_from_linear_operator(gcn_conv.weight.t())
         if gcn_conv.bias is not None:
             self.bias.set_(gcn_conv.bias.clone())
-        else:
-            self.bias.fill_(0)
 
     @classmethod
     def from_gcn_conv(

@@ -113,6 +113,7 @@ class HyperbolicGraphConv(torch_geometric.nn.conv.MessagePassing):
     def set_parameters_from_graph_conv(
         self, graph_conv: torch_geometric.nn.conv.GraphConv
     ):
+        self.reset_parameters()
         self.hyperplanes_neighbors.set_parameters_from_linear_operator(
             graph_conv.weight.t()
         )
