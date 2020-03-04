@@ -1,17 +1,16 @@
-from torch_geometric.nn.conv.message_passing import MessagePassing
 from .. import Distance2PoincareHyperplanes, WeightedPoincareCentroids
+import torch_geometric.nn.conv
 import torch.nn
 import inspect
 import collections
 
 
-class HyperbolicGCNConv(MessagePassing):
+class HyperbolicGCNConv(torch_geometric.nn.conv.MessagePassing):
     def __init__(
         self,
         in_channels,
         out_channels,
         *,
-        aggr="add",
         improved=False,
         cached=False,
         normalize=True,
@@ -23,7 +22,7 @@ class HyperbolicGCNConv(MessagePassing):
     ):
         if ball_out is None:
             ball_out = ball
-        super(HyperbolicGCNConv, self).__init__(aggr=aggr)
+        super(HyperbolicGCNConv, self).__init__(aggr="add")
         if num_basis is None:
             num_basis = out_channels
         self.num_basis = num_basis
@@ -66,6 +65,7 @@ class HyperbolicGCNConv(MessagePassing):
         self.hyperplanes = Distance2PoincareHyperplanes(
             in_channels, num_basis, ball=ball, scaled=True, squared=False
         )
+        self.bias = torch.nn.Parameter(torch.empty(out_channels), requires_grad=True)
         self.basis = WeightedPoincareCentroids(
             out_channels, num_basis, ball=ball_out, lincomb=True
         )
@@ -81,6 +81,7 @@ class HyperbolicGCNConv(MessagePassing):
         self.basis.centroids[:n] = torch.eye(
             n, k, device=self.basis.centroids.device, dtype=self.basis.centroids.dtype
         )
+        self.bias.fill_(0)
         self.cached_result = None
         self.cached_num_edges = None
 
@@ -148,6 +149,7 @@ class HyperbolicGCNConv(MessagePassing):
         return norm.view(-1, 1) * h_j if norm is not None else h_j
 
     def update(self, aggr_out):
+        aggr_out = aggr_out + self.bias
         activations = self.nonlinearity(aggr_out)
         return self.basis(activations)
 
@@ -155,3 +157,35 @@ class HyperbolicGCNConv(MessagePassing):
         return "{} -> {}, local={local}, aggr={aggr}".format(
             self.in_channels, self.out_channels, **self.__dict__
         )
+
+    @torch.no_grad()
+    def set_parameters_from_gcn_conv(self, gcn_conv: torch_geometric.nn.conv.GCNConv):
+        self.hyperplanes.set_parameters_from_linear_operator(gcn_conv.weight.t())
+        if gcn_conv.bias is not None:
+            self.bias.set_(gcn_conv.bias.clone())
+        else:
+            self.bias.fill_(0)
+
+    @classmethod
+    def from_gcn_conv(
+        cls,
+        gcn_conv: torch_geometric.nn.conv.GCNConv,
+        nonlinearity=torch.nn.Identity(),
+        *,
+        ball,
+        ball_out=None,
+        num_basis=None,
+    ):
+        layer = cls(
+            gcn_conv.in_channels,
+            gcn_conv.out_channels,
+            num_basis=num_basis,
+            nonlinearity=nonlinearity,
+            ball=ball,
+            ball_out=ball_out,
+            improved=gcn_conv.improved,
+            normalize=gcn_conv.normalize,
+            cached=gcn_conv.cached,
+        )
+        layer.set_parameters_from_gcn_conv(gcn_conv)
+        return layer

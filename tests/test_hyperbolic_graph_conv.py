@@ -32,7 +32,10 @@ def test_graph_conv(aggr, bias, local, sizes, weighted, ball_1, ball_2):
     itertools.product(["mean", "add"], [True, False], [(5, 5), (5, 7)], [True, False],),
 )
 def test_graph_conv_matches_euclidean(aggr, bias, sizes, weighted):
-    graph_conv = GraphConv(*sizes)
+    graph_conv = GraphConv(*sizes, aggr=aggr, bias=bias)
+    if bias:
+        with torch.no_grad():
+            graph_conv.lin.bias.normal_()
     ball = geoopt.Stereographic()
     hyp_graph_conv = HyperbolicGraphConv.from_graph_conv(graph_conv, ball=ball)
     edge_index = torch.tensor([[0, 0, 0, 1, 1, 1], [0, 1, 2, 0, 1, 2]])

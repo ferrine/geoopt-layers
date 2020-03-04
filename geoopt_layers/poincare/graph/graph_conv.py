@@ -110,16 +110,14 @@ class HyperbolicGraphConv(torch_geometric.nn.conv.MessagePassing):
             self.in_channels, self.out_channels, **self.__dict__
         )
 
-    @torch.no_grad()
-    def set_parameters_from_graph_conv_parameters(self, Aneigh, Aloop, b=None):
-        self.hyperplanes_neighbors.set_parameters_from_linear_operator(Aneigh)
-        self.hyperplanes_loop.set_parameters_from_linear_operator(Aloop, b)
-
     def set_parameters_from_graph_conv(
         self, graph_conv: torch_geometric.nn.conv.GraphConv
     ):
-        self.set_parameters_from_graph_conv_parameters(
-            graph_conv.weight.t(), graph_conv.lin.weight, graph_conv.lin.bias
+        self.hyperplanes_neighbors.set_parameters_from_linear_operator(
+            graph_conv.weight.t()
+        )
+        self.hyperplanes_loop.set_parameters_from_linear_operator(
+            graph_conv.lin.weight, graph_conv.lin.bias
         )
 
     @classmethod
