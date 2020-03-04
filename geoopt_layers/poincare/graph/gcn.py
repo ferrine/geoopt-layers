@@ -65,7 +65,7 @@ class HyperbolicGCNConv(torch_geometric.nn.conv.MessagePassing):
         self.hyperplanes = Distance2PoincareHyperplanes(
             in_channels, num_basis, ball=ball, scaled=True, squared=False
         )
-        self.bias = torch.nn.Parameter(torch.empty(out_channels), requires_grad=True)
+        self.bias = torch.nn.Parameter(torch.empty(num_basis), requires_grad=True)
         self.basis = WeightedPoincareCentroids(
             out_channels, num_basis, ball=ball_out, lincomb=True
         )
