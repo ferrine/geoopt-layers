@@ -31,20 +31,35 @@ class Distance2PoincareHyperplanes(ManifoldModule):
         self.ball = ball
         self.plane_shape = geoopt.utils.size2shape(plane_shape)
         self.num_planes = num_planes
-        self.points = geoopt.ManifoldParameter(
-            torch.empty(num_planes, plane_shape), manifold=self.ball
+        self.weight = torch.nn.Parameter(
+            torch.empty(num_planes, plane_shape),
+            requires_grad=True,
         )
-        self.tangents = torch.nn.Parameter(
-            torch.empty(num_planes, plane_shape), requires_grad=True
+        self.bias = torch.nn.Parameter(
+            torch.empty(num_planes),
+            requires_grad=True,
         )
         self.scaled = scaled
         self.std = std
         self.reset_parameters()
 
+    @property
+    def tangents(self):
+        return self.weight / 2
+
+    @property
+    def points(self):
+        weight = self.weight
+        bias = self.bias
+        points = -bias.unsqueeze(-1) * weight / weight.pow(2).sum(keepdims=True, dim=-1)
+        return self.ball.expmap0(points)
+
     def forward(self, input):
         input_p = input.unsqueeze(-self.n - 1)
-        points = self.points.view(self.points.shape + (1,) * self.n).transpose(1, 0)
-        tangents = self.tangents.view(self.points.shape + (1,) * self.n).transpose(1, 0)
+        points = self.points
+        tangents = self.tangents
+        points = points.view(points.shape + (1,) * self.n).transpose(1, 0)
+        tangents = tangents.view(tangents.shape + (1,) * self.n).transpose(1, 0)
 
         distance = self.ball.dist2plane(
             x=input_p,
@@ -68,29 +83,16 @@ class Distance2PoincareHyperplanes(ManifoldModule):
 
     @torch.no_grad()
     def reset_parameters(self):
-        direction = torch.randn_like(self.points)
-        direction /= direction.norm(dim=-1, keepdim=True)
-        distance = torch.empty_like(self.points[..., :1]).normal_(std=self.std)
-        self.points.set_(self.ball.expmap0(direction * distance))
-        self.tangents.set_(self.points.clone())
-
-    @staticmethod
-    def hyperplane_from_linear_operator(A, b=None):
-        tangents = A
-        if b is None:
-            points = torch.zeros_like(tangents)
-        else:
-            points = (
-                -b.unsqueeze(-1) * tangents / tangents.pow(2).sum(keepdims=True, dim=-1)
-            )
-        return points, tangents / 2
+        torch.nn.init.xavier_normal_(self.weight)
+        torch.nn.init.constant_(self.bias, 0.)
 
     @torch.no_grad()
     def set_parameters_from_linear_operator(self, A, b=None):
-        points, tangents = self.hyperplane_from_linear_operator(A, b)
-        points = self.ball.expmap0(points)
-        self.points[:points.shape[0]] = points
-        self.tangents[:tangents.shape[0]] = tangents
+        self.weight[:A.shape[0]] = A
+        if b is not None:
+            self.bias[:b.shape[0]] = b
+        else:
+            self.bias.fill_(0)
 
     def set_parameters_from_linear_layer(self, linear):
         self.set_parameters_from_linear_operator(linear.weight, linear.bias)
