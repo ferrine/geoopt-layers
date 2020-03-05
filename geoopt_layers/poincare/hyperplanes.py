@@ -51,7 +51,7 @@ class Distance2PoincareHyperplanes(ManifoldModule):
     def points(self):
         weight = self.weight
         bias = self.bias
-        points = -bias.unsqueeze(-1) * weight / weight.pow(2).sum(keepdims=True, dim=-1)
+        points = -bias.unsqueeze(-1) * weight / weight.pow(2).sum(keepdims=True, dim=-1).clamp_min_(1e-15)
         return self.ball.expmap0(points)
 
     def forward(self, input):
