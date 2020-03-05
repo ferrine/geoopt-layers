@@ -142,8 +142,7 @@ class WeightedPoincareCentroids(ManifoldModule):
             "num_centroids={num_centroids}, "
             "method={method}, "
             "learn_origin={learn_origin}, "
-            "lincomb={lincomb}, "
-            "zero={zero}".format(**self.__dict__, self=self)
+            "lincomb={lincomb}".format(**self.__dict__, self=self)
         )
 
 
