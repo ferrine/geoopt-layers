@@ -572,3 +572,13 @@ def test_linear_layer_matches_euclidean():
     np.testing.assert_allclose(
         output_euclidean.detach(), output_hyperbolic.detach(), atol=1e-6
     )
+
+
+def test_linear_layer_expanded():
+    ball = geoopt.Stereographic(k=0.0)
+    linear = torch.nn.Linear(10, 15)
+    hyp_linear = geoopt_layers.poincare.MobiusLinear(10, 15, ball=ball, num_basis=20)
+    hyp_linear.set_parameters_from_linear_layer(linear)
+    input = torch.randn(3, 10)
+    output_hyperbolic = hyp_linear(input)
+    ball.assert_check_point_on_manifold(output_hyperbolic)
