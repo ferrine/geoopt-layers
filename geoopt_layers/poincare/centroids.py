@@ -1,6 +1,5 @@
 import geoopt
 from geoopt_layers.base import ManifoldModule
-from .. import distance
 from .math import poincare_mean
 import torch
 
@@ -17,44 +16,31 @@ __all__ = [
 ]
 
 
-@torch.no_grad()
-def keep_zero(mod, input):
-    mod.centroids[0] = 0.0
-
-
-class Distance2PoincareCentroids(distance.Distance2Centroids):
+class Distance2PoincareCentroids(ManifoldModule):
     n = 0
 
     def __init__(
-        self,
-        centroid_shape: int,
-        num_centroids: int,
-        squared=False,
-        *,
-        ball,
-        std=1.0,
-        zero=False,
+        self, centroid_shape: int, num_centroids: int, squared=False, *, ball,
     ):
-        self.std = std
-        super().__init__(
-            ball,
-            centroid_shape=centroid_shape,
-            num_centroids=num_centroids,
-            squared=squared,
+        super().__init__()
+        if not isinstance(num_centroids, int) or num_centroids < 1:
+            raise TypeError("num_centroids should be int > 0")
+        self.centroid_shape = centroid_shape = geoopt.utils.size2shape(centroid_shape)
+        self.num_centroids = num_centroids
+        self.manifold = ball
+        self.log_centroids = torch.nn.Parameter(
+            torch.empty((num_centroids,) + centroid_shape), requires_grad=True
         )
-        self.zero = zero
-        if zero:
-            self.register_forward_pre_hook(keep_zero)
+        self.squared = squared
+        self.reset_parameters()
 
     @torch.no_grad()
     def reset_parameters(self):
-        self.centroids.set_(self.manifold.random(self.centroids.shape, std=self.std))
-        self.centroids[0] = 0.0
+        self.log_centroids.normal_(std=self.log_centroids.shape[-1] ** -0.5)
 
-    def extra_repr(self) -> str:
-        text = super().extra_repr()
-        text += ", zero={}".format(self.zero)
-        return text
+    @property
+    def centroids(self):
+        return self.manifold.expmap0(self.log_centroids)
 
     def forward(self, input):
         input = input.unsqueeze(-self.n - 1)
@@ -91,7 +77,6 @@ class WeightedPoincareCentroids(ManifoldModule):
         ball,
         learn_origin=True,
         std=1.0,
-        zero=False,
         lincomb=True,
     ):
         super().__init__()
@@ -104,35 +89,34 @@ class WeightedPoincareCentroids(ManifoldModule):
         self.manifold = ball
         self.lincomb = lincomb
         self.method = method
-        self.centroids = geoopt.ManifoldParameter(
-            torch.empty((num_centroids,) + centroid_shape), manifold=ball
+        self.log_centroids = torch.nn.Parameter(
+            torch.empty((num_centroids,) + centroid_shape), requires_grad=True
         )
         self.learn_origin = learn_origin and method == "tangent"
-        self.register_origin(
-            "origin",
-            self.manifold,
-            origin_shape=centroid_shape,
-            none=not self.learn_origin,
-            parameter=learn_origin,
-        )
-        self.zero = zero
-        if zero:
-            self.register_forward_pre_hook(keep_zero)
+        if self.learn_origin:
+            self.log_origin = torch.nn.Parameter(
+                torch.empty(centroid_shape), requires_grad=True
+            )
+        else:
+            self.register_parameter("log_origin", None)
         self.reset_parameters()
+
+    @property
+    def centroids(self):
+        return self.manifold.expmap0(self.log_centroids)
+
+    @property
+    def origin(self):
+        if self.log_origin is not None:
+            return self.manifold.expmap0(self.log_origin)
+        else:
+            return None
 
     @torch.no_grad()
     def reset_parameters(self):
-        self.centroids.set_(
-            self.manifold.random(
-                self.centroids.shape,
-                std=self.std,
-                dtype=self.centroids.dtype,
-                device=self.centroids.device,
-            )
-        )
-        self.centroids[0] = 0.0
-        if self.origin is not None:
-            self.origin.zero_()
+        self.log_centroids.normal_(std=self.log_centroids.shape[-1] ** -0.5)
+        if self.log_origin is not None:
+            self.log_origin.zero_()
 
     def forward(self, weights):
         if self.origin is not None:

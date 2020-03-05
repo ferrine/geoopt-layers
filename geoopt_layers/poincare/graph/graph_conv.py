@@ -79,8 +79,11 @@ class HyperbolicGraphConv(torch_geometric.nn.conv.MessagePassing):
     def reset_parameters(self):
         n = min(self.out_channels, self.num_basis)
         k = self.out_channels
-        self.basis.centroids[:n] = torch.eye(
-            n, k, device=self.basis.centroids.device, dtype=self.basis.centroids.dtype
+        self.basis.log_centroids[:n] = torch.eye(
+            n,
+            k,
+            device=self.basis.log_centroids.device,
+            dtype=self.basis.log_centroids.dtype,
         )
 
     def forward(self, x, edge_index, edge_weight=None, size=None):

@@ -78,8 +78,11 @@ class HyperbolicGCNConv(torch_geometric.nn.conv.MessagePassing):
     def reset_parameters(self):
         n = min(self.out_channels, self.num_basis)
         k = self.out_channels
-        self.basis.centroids[:n] = torch.eye(
-            n, k, device=self.basis.centroids.device, dtype=self.basis.centroids.dtype
+        self.basis.log_centroids[:n] = torch.eye(
+            n,
+            k,
+            device=self.basis.log_centroids.device,
+            dtype=self.basis.log_centroids.dtype,
         )
         self.bias.fill_(0)
         self.cached_result = None
@@ -163,7 +166,7 @@ class HyperbolicGCNConv(torch_geometric.nn.conv.MessagePassing):
         self.reset_parameters()
         self.hyperplanes.set_parameters_from_linear_operator(gcn_conv.weight.t())
         if gcn_conv.bias is not None:
-            self.bias[:gcn_conv.bias.shape[0]] = gcn_conv.bias.clone()
+            self.bias[: gcn_conv.bias.shape[0]] = gcn_conv.bias.clone()
 
     @classmethod
     def from_gcn_conv(

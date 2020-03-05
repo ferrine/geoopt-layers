@@ -32,13 +32,9 @@ class Distance2PoincareHyperplanes(ManifoldModule):
         self.plane_shape = geoopt.utils.size2shape(plane_shape)
         self.num_planes = num_planes
         self.weight = torch.nn.Parameter(
-            torch.empty(num_planes, plane_shape),
-            requires_grad=True,
+            torch.empty(num_planes, plane_shape), requires_grad=True,
         )
-        self.bias = torch.nn.Parameter(
-            torch.empty(num_planes),
-            requires_grad=True,
-        )
+        self.bias = torch.nn.Parameter(torch.empty(num_planes), requires_grad=True,)
         self.scaled = scaled
         self.std = std
         self.reset_parameters()
@@ -51,7 +47,11 @@ class Distance2PoincareHyperplanes(ManifoldModule):
     def points(self):
         weight = self.weight
         bias = self.bias
-        points = -bias.unsqueeze(-1) * weight / weight.pow(2).sum(keepdims=True, dim=-1).clamp_min_(1e-15)
+        points = (
+            -bias.unsqueeze(-1)
+            * weight
+            / weight.pow(2).sum(keepdims=True, dim=-1).clamp_min_(1e-15)
+        )
         return self.ball.expmap0(points)
 
     def forward(self, input):
@@ -84,13 +84,13 @@ class Distance2PoincareHyperplanes(ManifoldModule):
     @torch.no_grad()
     def reset_parameters(self):
         torch.nn.init.xavier_normal_(self.weight)
-        torch.nn.init.constant_(self.bias, 0.)
+        torch.nn.init.constant_(self.bias, 0.0)
 
     @torch.no_grad()
     def set_parameters_from_linear_operator(self, A, b=None):
-        self.weight[:A.shape[0]] = A
+        self.weight[: A.shape[0]] = A
         if b is not None:
-            self.bias[:b.shape[0]] = b
+            self.bias[: b.shape[0]] = b
         else:
             self.bias.fill_(0)
 
