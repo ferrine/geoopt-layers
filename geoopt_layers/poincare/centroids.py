@@ -89,7 +89,12 @@ class WeightedPoincareCentroids(ManifoldModule):
         self.manifold = ball
         self.lincomb = lincomb
         self.method = method
-        self.basis_manifold = geoopt.Sphere()
+        if lincomb:
+            # to avoid scaling ambiguity, normalize basis
+            self.basis_manifold = geoopt.Sphere()
+        else:
+            # input is normalized, this will allow to have proper output support
+            self.basis_manifold = geoopt.Euclidean(ndim=1)
         self.log_centroids = geoopt.ManifoldParameter(
             torch.empty((num_centroids,) + centroid_shape), manifold=self.basis_manifold
         )
