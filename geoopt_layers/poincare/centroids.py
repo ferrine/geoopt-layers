@@ -89,8 +89,9 @@ class WeightedPoincareCentroids(ManifoldModule):
         self.manifold = ball
         self.lincomb = lincomb
         self.method = method
-        self.log_centroids = torch.nn.Parameter(
-            torch.empty((num_centroids,) + centroid_shape), requires_grad=True
+        self.basis_manifold = geoopt.Sphere()
+        self.log_centroids = geoopt.ManifoldParameter(
+            torch.empty((num_centroids,) + centroid_shape), manifold=self.basis_manifold
         )
         self.learn_origin = learn_origin and method == "tangent"
         if self.learn_origin:
@@ -115,6 +116,7 @@ class WeightedPoincareCentroids(ManifoldModule):
     @torch.no_grad()
     def reset_parameters(self):
         self.log_centroids.normal_(std=self.log_centroids.shape[-1] ** -0.5)
+        self.log_centroids.proj_()
         if self.log_origin is not None:
             self.log_origin.zero_()
 
