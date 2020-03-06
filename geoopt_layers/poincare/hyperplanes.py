@@ -23,7 +23,7 @@ class Distance2PoincareHyperplanes(ManifoldModule):
         scaled=True,
         *,
         ball,
-        std=1.0,
+        normalize=False,
     ):
         super().__init__()
         self.signed = signed
@@ -36,7 +36,7 @@ class Distance2PoincareHyperplanes(ManifoldModule):
         )
         self.bias = torch.nn.Parameter(torch.empty(num_planes), requires_grad=True,)
         self.scaled = scaled
-        self.std = std
+        self.normalize = normalize
         self.reset_parameters()
 
     @property
@@ -47,11 +47,9 @@ class Distance2PoincareHyperplanes(ManifoldModule):
     def points(self):
         weight = self.weight
         bias = self.bias
-        points = (
-            -bias.unsqueeze(-1)
-            * weight
-            / weight.pow(2).sum(keepdims=True, dim=-1).clamp_min_(1e-15)
-        )
+        points = -bias.unsqueeze(-1) * weight
+        if self.normalize:
+            points = points / weight.pow(2).sum(keepdims=True, dim=-1).clamp_min_(1e-15)
         return self.ball.expmap0(points)
 
     def forward(self, input):
