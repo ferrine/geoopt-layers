@@ -69,7 +69,6 @@ class MobiusLinear(ManifoldModule):
         ball,
         ball_out=None,
         num_basis=None,
-        normalize=False,
     ):
         super().__init__()
         if ball_out is None:
@@ -85,7 +84,6 @@ class MobiusLinear(ManifoldModule):
             ball=ball,
             scaled=True,
             squared=False,
-            normalize=normalize,
         )
         self.basis = WeightedPoincareCentroids(
             out_features, num_basis, ball=ball_out, lincomb=True
@@ -125,7 +123,6 @@ class MobiusLinear(ManifoldModule):
         ball,
         ball_out=None,
         num_basis=None,
-        normalize=True,
     ):
         layer = cls(
             linear.in_features,
@@ -134,7 +131,6 @@ class MobiusLinear(ManifoldModule):
             ball=ball,
             ball_out=ball_out,
             num_basis=num_basis,
-            normalize=normalize,
         )
         layer.set_parameters_from_linear_layer(linear)
         return layer
