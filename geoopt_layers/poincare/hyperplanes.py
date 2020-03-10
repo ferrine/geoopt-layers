@@ -30,7 +30,7 @@ class Distance2PoincareHyperplanes(ManifoldModule):
         self.ball = ball
         self.plane_shape = geoopt.utils.size2shape(plane_shape)
         self.num_planes = num_planes
-        self.sphere = geoopt.SphereExact()
+        self.sphere = geoopt.Sphere()
         self.tangents = geoopt.ManifoldParameter(
             torch.empty(num_planes, plane_shape),
             requires_grad=True,
