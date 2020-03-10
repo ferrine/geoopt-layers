@@ -134,13 +134,10 @@ class WeightedPoincareCentroids(ManifoldModule):
         n = min(self.num_centroids, self.centroid_shape[0])
         k = self.centroid_shape[0]
         self.log_centroids[:n] = torch.eye(
-            n,
-            k,
-            device=self.log_centroids.device,
-            dtype=self.log_centroids.dtype,
+            n, k, device=self.log_centroids.device, dtype=self.log_centroids.dtype,
         )
         if self.num_centroids > k:
-            self.log_centroids[n:min(2 * n, self.num_centroids)] = - torch.eye(
+            self.log_centroids[n : min(2 * n, self.num_centroids)] = -torch.eye(
                 min(n, self.num_centroids - n),
                 k,
                 device=self.log_centroids.device,

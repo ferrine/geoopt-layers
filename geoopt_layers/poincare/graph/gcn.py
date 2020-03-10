@@ -77,6 +77,7 @@ class HyperbolicGCNConv(torch_geometric.nn.conv.MessagePassing):
     @torch.no_grad()
     def reset_parameters(self):
         self.basis.reset_parameters_identity()
+        self.bias.fill_(0)
         self.cached_result = None
         self.cached_num_edges = None
 
@@ -140,7 +141,6 @@ class HyperbolicGCNConv(torch_geometric.nn.conv.MessagePassing):
         if self.local:
             xr_j = self.ball_in.mobius_add(-x_i, x_j)
             h_j = self.hyperplanes(xr_j)
-
         return norm.view(-1, 1) * h_j if norm is not None else h_j
 
     def update(self, aggr_out):
