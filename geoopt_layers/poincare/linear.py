@@ -89,14 +89,7 @@ class MobiusLinear(ManifoldModule):
 
     @torch.no_grad()
     def reset_parameters(self):
-        n = min(self.out_features, self.num_basis)
-        k = self.out_features
-        self.basis.log_centroids[:n] = torch.eye(
-            n,
-            k,
-            device=self.basis.log_centroids.device,
-            dtype=self.basis.log_centroids.dtype,
-        )
+        self.basis.reset_parameters_identity()
 
     def forward(self, input):
         distances = self.hyperplanes(input)

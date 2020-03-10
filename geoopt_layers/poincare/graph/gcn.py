@@ -76,15 +76,7 @@ class HyperbolicGCNConv(torch_geometric.nn.conv.MessagePassing):
 
     @torch.no_grad()
     def reset_parameters(self):
-        n = min(self.out_channels, self.num_basis)
-        k = self.out_channels
-        self.basis.log_centroids[:n] = torch.eye(
-            n,
-            k,
-            device=self.basis.log_centroids.device,
-            dtype=self.basis.log_centroids.dtype,
-        )
-        self.bias.fill_(0)
+        self.basis.reset_parameters_identity()
         self.cached_result = None
         self.cached_num_edges = None
 

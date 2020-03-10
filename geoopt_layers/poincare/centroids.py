@@ -125,6 +125,28 @@ class WeightedPoincareCentroids(ManifoldModule):
         if self.log_origin is not None:
             self.log_origin.zero_()
 
+    @torch.no_grad()
+    def reset_parameters_identity(self):
+        self.log_centroids.normal_()
+        self.log_centroids /= self.log_centroids.norm(dim=-1, keepdim=True)
+        if self.log_origin is not None:
+            self.log_origin.zero_()
+        n = min(self.num_centroids, self.centroid_shape[0])
+        k = self.centroid_shape[0]
+        self.log_centroids[:n] = torch.eye(
+            n,
+            k,
+            device=self.log_centroids.device,
+            dtype=self.log_centroids.dtype,
+        )
+        if self.num_centroids > k:
+            self.log_centroids[n:min(2 * n, self.num_centroids)] = - torch.eye(
+                min(n, self.num_centroids - n),
+                k,
+                device=self.log_centroids.device,
+                dtype=self.log_centroids.dtype,
+            )
+
     def forward(self, weights):
         if self.origin is not None:
             origin = self.origin.view(self.origin.shape + (1,) * self.n)
