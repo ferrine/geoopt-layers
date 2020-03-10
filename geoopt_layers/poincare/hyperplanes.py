@@ -96,7 +96,7 @@ class Distance2PoincareHyperplanes(ManifoldModule):
         if b is not None:
             self.bias[: b.shape[0]] = b
         else:
-            self.bias.fill_(0)
+            self.bias.fill_(1e-4)
 
     def set_parameters_from_linear_layer(self, linear):
         self.set_parameters_from_linear_operator(linear.weight, linear.bias)
