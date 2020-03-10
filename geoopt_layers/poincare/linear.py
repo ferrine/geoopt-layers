@@ -79,11 +79,7 @@ class MobiusLinear(ManifoldModule):
         self.in_features = in_features
         self.out_features = out_features
         self.hyperplanes = Distance2PoincareHyperplanes(
-            in_features,
-            num_basis,
-            ball=ball,
-            scaled=True,
-            squared=False,
+            in_features, num_basis, ball=ball, scaled=True, squared=False,
         )
         self.basis = WeightedPoincareCentroids(
             out_features, num_basis, ball=ball_out, lincomb=True

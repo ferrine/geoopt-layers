@@ -30,23 +30,23 @@ class Distance2PoincareHyperplanes(ManifoldModule):
         self.ball = ball
         self.plane_shape = geoopt.utils.size2shape(plane_shape)
         self.num_planes = num_planes
-        self.weight = torch.nn.Parameter(
-            torch.empty(num_planes, plane_shape), requires_grad=True,
+        self.sphere = geoopt.Sphere()
+        self.tangents = geoopt.ManifoldParameter(
+            torch.empty(num_planes, plane_shape),
+            requires_grad=True,
+            manifold=self.sphere,
         )
+        if scaled:
+            self.scale = torch.nn.Parameter(
+                torch.empty(num_planes), requires_grad=True,
+            )
         self.bias = torch.nn.Parameter(torch.empty(num_planes), requires_grad=True,)
-        self.scaled = scaled
         self.reset_parameters()
 
     @property
-    def tangents(self):
-        return self.weight / 2
-
-    @property
     def points(self):
-        weight = self.weight
         bias = self.bias
-        points = -bias.unsqueeze(-1) * weight
-        points = points / weight.pow(2).sum(keepdims=True, dim=-1).clamp_min_(1e-15)
+        points = -bias.unsqueeze(-1) * self.tangents
         return self.ball.expmap0(points)
 
     def forward(self, input):
@@ -62,8 +62,11 @@ class Distance2PoincareHyperplanes(ManifoldModule):
             a=tangents,
             signed=self.signed,
             dim=-self.n - 2,
-            scaled=self.scaled,
+            scaled=False,
         )
+        if self.scale is not None:
+            scale = self.scale.view((-1,) + (1,) * self.n)
+            distance = distance * scale
         if self.squared and self.signed:
             sign = distance.sign()
             distance = distance ** 2 * sign
@@ -78,12 +81,18 @@ class Distance2PoincareHyperplanes(ManifoldModule):
 
     @torch.no_grad()
     def reset_parameters(self):
-        torch.nn.init.xavier_normal_(self.weight)
+        torch.nn.init.xavier_normal_(self.tangents)
+        if self.scale is not None:
+            self.scale.set_(self.tangents.norm(dim=-1) / 2)
+        self.tangents.proj_()
         torch.nn.init.constant_(self.bias, 0.0)
 
     @torch.no_grad()
     def set_parameters_from_linear_operator(self, A, b=None):
-        self.weight[: A.shape[0]] = A
+        if self.scale is not None:
+            self.scale[: A.shape[0]].set_(A.norm(dim=-1) / 2)
+        self.tangents[: A.shape[0]] = A
+        self.tangents.proj_()
         if b is not None:
             self.bias[: b.shape[0]] = b
         else:
