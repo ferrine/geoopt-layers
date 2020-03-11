@@ -76,7 +76,6 @@ class WeightedPoincareCentroids(ManifoldModule):
         *,
         ball,
         learn_origin=True,
-        std=1.0,
         lincomb=True,
     ):
         super().__init__()
@@ -84,7 +83,6 @@ class WeightedPoincareCentroids(ManifoldModule):
         if not isinstance(num_centroids, int) or num_centroids < 1:
             raise TypeError("num_centroids should be int > 0")
         self.centroid_shape = centroid_shape = geoopt.utils.size2shape(centroid_shape)
-        self.std = std
         self.num_centroids = num_centroids
         self.manifold = ball
         self.lincomb = lincomb
