@@ -76,7 +76,6 @@ class HyperbolicSplineConv(HyperbolicMessagePassing):
         *,
         ball,
         ball_out=None,
-        local=False,
         aggr_method="einstein",
     ):
         if ball_out is None:
@@ -93,36 +92,6 @@ class HyperbolicSplineConv(HyperbolicMessagePassing):
         self.out_channels = out_channels
         self.dim = dim
         self.degree = degree
-        if in_channels != out_channels and local and not root_weight:
-            raise TypeError(
-                "Root should be specified if local within changing dimension"
-            )
-        self.local = local
-        if self.local:
-            self.__msg_params__ = collections.OrderedDict(
-                {
-                    "x_i": inspect.Parameter(
-                        "x_i", inspect.Parameter.POSITIONAL_OR_KEYWORD
-                    ),
-                    "x_j": inspect.Parameter(
-                        "x_j", inspect.Parameter.POSITIONAL_OR_KEYWORD
-                    ),
-                    "pseudo": inspect.Parameter(
-                        "pseudo", inspect.Parameter.POSITIONAL_OR_KEYWORD
-                    ),
-                }
-            )  # ["x_i", "x_j", "pseudo"]
-        else:
-            self.__msg_params__ = collections.OrderedDict(
-                {
-                    "log_x_j": inspect.Parameter(
-                        "log_x_j", inspect.Parameter.POSITIONAL_OR_KEYWORD
-                    ),
-                    "pseudo": inspect.Parameter(
-                        "pseudo", inspect.Parameter.POSITIONAL_OR_KEYWORD
-                    ),
-                }
-            )  # ["log_x_j", "pseudo"]
         kernel_size = torch.tensor(repeat(kernel_size, dim), dtype=torch.long)
         self.register_buffer("kernel_size", kernel_size)
 
@@ -212,36 +181,24 @@ class HyperbolicSplineConv(HyperbolicMessagePassing):
         )
 
     def message(self, x_i=None, x_j=None, log_x_j=None, pseudo=None):
-        if self.local:
-            log_xi_x_j = self.ball.logmap(x_i, x_j)
-            data = spline_basis(
-                pseudo,
-                self._buffers["kernel_size"],
-                self._buffers["is_open_spline"],
-                self.degree,
-            )
-            log_z_j = spline_weighting(log_xi_x_j, self.weight, *data)
-        else:
-            data = spline_basis(
-                pseudo,
-                self._buffers["kernel_size"],
-                self._buffers["is_open_spline"],
-                self.degree,
-            )
-            log_z_j = spline_weighting(log_x_j, self.weight, *data)
+        data = spline_basis(
+            pseudo,
+            self._buffers["kernel_size"],
+            self._buffers["is_open_spline"],
+            self.degree,
+        )
+        log_z_j = spline_weighting(log_x_j, self.weight, *data)
         return self.ball_out.expmap0(log_z_j)
 
     def update(self, aggr_out, log_x, x):
         if self.root is not None:
             z = self.ball_out.expmap0(log_x @ self.root)
             aggr_out = self.ball_out.mobius_add(z, aggr_out)
-        elif self.local:
-            aggr_out = self.ball_out.mobius_add(x, aggr_out)
         if self.bias is not None:
             aggr_out = self.ball_out.mobius_add(aggr_out, self.bias)
         return aggr_out
 
     def extra_repr(self) -> str:
-        return "{} -> {}, dim={dim}, local={local}, aggr={aggr}, aggr_method={aggr_method}".format(
+        return "{} -> {}, dim={dim}, aggr={aggr}, aggr_method={aggr_method}".format(
             self.in_channels, self.out_channels, **self.__dict__
         )

@@ -124,7 +124,7 @@ class HyperbolicGCNConv(torch_geometric.nn.conv.MessagePassing):
         return self.basis(activations)
 
     def extra_repr(self) -> str:
-        return "{} -> {}, local={local}, aggr={aggr}".format(
+        return "{} -> {}, aggr={aggr}".format(
             self.in_channels, self.out_channels, **self.__dict__
         )
 

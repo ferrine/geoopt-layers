@@ -228,7 +228,7 @@ def mobius_conv2d(
         dilation=dilation,
     )
     output_denominator = torch.nn.functional.conv2d(
-        denominator, weight_avg, stride=stride, padding=padding, dilation=dilation
+        denominator, weight_avg.abs(), stride=stride, padding=padding, dilation=dilation
     )
     output_denominator = output_denominator.repeat_interleave(out_dim, dim=1)
     two_mean = output_nominator / output_denominator
