@@ -119,8 +119,8 @@ class HyperbolicGCNConv(torch_geometric.nn.conv.MessagePassing):
 
     def update(self, aggr_out):
         aggr_out = aggr_out + self.bias
-        aggr_out = self.mixing(aggr_out)
         activations = self.nonlinearity(aggr_out)
+        activations = self.mixing(activations)
         return self.basis(activations)
 
     def extra_repr(self) -> str:
