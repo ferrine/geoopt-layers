@@ -5,8 +5,6 @@ from torch.nn import Parameter
 import torch_geometric
 from .message_passing import HyperbolicMessagePassing
 from ...utils import repeat
-import collections
-import inspect
 
 try:
     from torch_spline_conv import spline_basis, spline_weighting

@@ -1,8 +1,6 @@
 from .. import Distance2PoincareHyperplanes, WeightedPoincareCentroids
 import torch_geometric.nn.conv
 import torch.nn
-import inspect
-import collections
 
 
 class HyperbolicGCNConv(torch_geometric.nn.conv.MessagePassing):
