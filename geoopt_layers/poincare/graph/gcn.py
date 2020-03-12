@@ -57,12 +57,20 @@ class HyperbolicGCNConv(torch_geometric.nn.conv.MessagePassing):
             ]
         )
         self.mixing = torch.nn.Linear(
-            num_planes * len(self.balls_in), num_basis * len(self.balls_out)
+            num_planes * self.num_in_manifolds, num_basis * self.num_out_manifolds
         )
         self.nonlinearity = nonlinearity
         self.cached_result = None
         self.cached_num_edges = None
         self.reset_parameters()
+
+    @property
+    def num_in_manifolds(self):
+        return len(self.balls_in)
+
+    @property
+    def num_out_manifolds(self):
+        return len(self.balls_out)
 
     @torch.no_grad()
     def reset_parameters(self):
@@ -122,7 +130,7 @@ class HyperbolicGCNConv(torch_geometric.nn.conv.MessagePassing):
 
         edge_index, norm = self.cached_result
 
-        xs = x.chunk(len(self.balls_in), -1)
+        xs = x.chunk(self.num_in_manifolds, -1)
         dists = [plane(x) for x, plane in zip(xs, self.hyperplanes)]
         dists = torch.cat(dists, dim=-1)
         return self.propagate(edge_index, dists=dists, norm=norm)
@@ -133,21 +141,19 @@ class HyperbolicGCNConv(torch_geometric.nn.conv.MessagePassing):
     def update(self, aggr_out):
         activations = self.nonlinearity(aggr_out)
         activations = self.mixing(activations)
-        activations = activations.chunk(len(self.balls_out), -1)
+        activations = activations.chunk(self.num_out_manifolds, -1)
         points = [basis(a) for basis, a in zip(self.basis, activations)]
         return torch.cat(points, dim=-1)
 
     def extra_repr(self) -> str:
-        return "{} -> {}, aggr={aggr}".format(
+        return "{}x -> {}x, aggr={aggr}".format(
             self.in_channels, self.out_channels, **self.__dict__
         )
 
     @torch.no_grad()
     def set_parameters_from_gcn_conv(self, gcn_conv: torch_geometric.nn.conv.GCNConv):
         self.reset_parameters()
-        self.hyperplanes.set_parameters_from_linear_operator(gcn_conv.weight.t())
-        if gcn_conv.bias is not None:
-            self.bias[: gcn_conv.bias.shape[0]] = gcn_conv.bias.clone()
+        self.hyperplanes[0].set_parameters_from_linear_operator(gcn_conv.weight.t(), gcn_conv.bias)
 
     @classmethod
     def from_gcn_conv(
@@ -164,8 +170,8 @@ class HyperbolicGCNConv(torch_geometric.nn.conv.MessagePassing):
             gcn_conv.out_channels,
             num_basis=num_basis,
             nonlinearity=nonlinearity,
-            ball=ball,
-            ball_out=ball_out,
+            balls=ball,
+            balls_out=ball_out,
             improved=gcn_conv.improved,
             normalize=gcn_conv.normalize,
             cached=gcn_conv.cached,
