@@ -8,27 +8,27 @@ from geoopt_layers.poincare.graph import HyperbolicGCNConv
 
 
 @pytest.mark.parametrize(
-    "aggr_method,bias,sizes,weighted",
-    itertools.product(
-        ["einstein", "tangent"],
-        [True, False],
-        [(5, 5), (5, 7)],
-        [True, False],
-    ),
+    "sizes,weighted,n_in,n_out",
+    itertools.product([(5, 5), (5, 7)], [True, False], [1, 2], [1, 2],),
 )
-def test_graph_conv(aggr_method, bias, sizes, weighted, ball_1, ball_2):
+def test_graph_conv(sizes, weighted, ball_1, ball_2, n_in, n_out):
     edge_index = torch.tensor([[0, 0, 0, 1, 1, 1], [0, 1, 2, 0, 1, 2]])
     if weighted:
         edge_weight = torch.rand(edge_index.size(1))
     else:
         edge_weight = None
-    x = ball_1.random(3, 5)
+    x = ball_1.random(n_in, 3, 5)
+    x = torch.cat(x.unbind(0), -1)
     layer = HyperbolicGCNConv(
-        *sizes, num_basis=sizes[1] * 2, ball=ball_1, ball_out=ball_2
+        *sizes,
+        num_basis=sizes[1] * 2,
+        balls=[ball_1] * n_in,
+        balls_out=[ball_2] * n_out
     )
     out = layer(x, edge_index, edge_weight=edge_weight)
-    assert out.shape == (3, sizes[-1])
-    ball_2.assert_check_point_on_manifold(out)
+    assert out.shape == (3, sizes[-1] * n_out)
+    for x in out.chunk(n_out, -1):
+        ball_2.assert_check_point_on_manifold(x)
 
 
 @pytest.mark.skip("not now")

@@ -61,9 +61,7 @@ class HyperbolicGraphConv(torch_geometric.nn.conv.MessagePassing):
     def forward(self, x, edge_index, edge_weight=None, size=None):
         """"""
         h = self.hyperplanes_neighbors(x)
-        return self.propagate(
-            edge_index, size=size, x=x, h=h, edge_weight=edge_weight
-        )
+        return self.propagate(edge_index, size=size, x=x, h=h, edge_weight=edge_weight)
 
     def message(self, h_j=None, edge_weight=None):
         return h_j if edge_weight is None else edge_weight.view(-1, 1) * h_j

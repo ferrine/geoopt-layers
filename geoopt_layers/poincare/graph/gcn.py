@@ -13,33 +13,52 @@ class HyperbolicGCNConv(torch_geometric.nn.conv.MessagePassing):
         cached=False,
         normalize=True,
         num_basis=None,
-        ball,
-        ball_out=None,
+        num_planes=None,
+        balls,
+        balls_out=None,
         local=False,
         nonlinearity=torch.nn.Identity(),
     ):
-        if ball_out is None:
-            ball_out = ball
+        if not isinstance(balls, list):
+            balls = [balls]
+        if balls_out is None:
+            balls_out = balls
+        if not isinstance(balls_out, list):
+            balls_out = [balls_out]
         super(HyperbolicGCNConv, self).__init__(aggr="add")
+        if num_planes is None:
+            num_planes = in_channels
         if num_basis is None:
             num_basis = out_channels
         self.num_basis = num_basis
-        self.ball_in = ball
-        self.ball_out = ball_out
+        self.num_planes = num_planes
+        self.balls_in = torch.nn.ModuleList(balls)
+        self.balls_out = torch.nn.ModuleList(balls_out)
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.local = local
         self.improved = improved
         self.cached = cached
         self.normalize = normalize
-        self.hyperplanes = Distance2PoincareHyperplanes(
-            in_channels, num_basis, ball=ball, scaled=True, squared=False
+        self.hyperplanes = torch.nn.ModuleList(
+            [
+                Distance2PoincareHyperplanes(
+                    in_channels, num_planes, ball=ball, scaled=True, squared=False
+                )
+                for ball in self.balls_in
+            ]
         )
-        self.bias = torch.nn.Parameter(torch.empty(num_basis), requires_grad=True)
-        self.basis = WeightedPoincareCentroids(
-            out_channels, num_basis, ball=ball_out, lincomb=True
+        self.basis = torch.nn.ModuleList(
+            [
+                WeightedPoincareCentroids(
+                    out_channels, num_basis, ball=ball_out, lincomb=True
+                )
+                for ball_out in self.balls_out
+            ]
         )
-        self.mixing = torch.nn.Linear(num_basis, num_basis)
+        self.mixing = torch.nn.Linear(
+            num_planes * len(self.balls_in), num_basis * len(self.balls_out)
+        )
         self.nonlinearity = nonlinearity
         self.cached_result = None
         self.cached_num_edges = None
@@ -47,15 +66,9 @@ class HyperbolicGCNConv(torch_geometric.nn.conv.MessagePassing):
 
     @torch.no_grad()
     def reset_parameters(self):
-        self.basis.reset_parameters_identity()
-        self.mixing.weight.set_(
-            torch.eye(
-                self.num_basis,
-                device=self.mixing.weight.device,
-                dtype=self.mixing.weight.dtype,
-            )
-        )
-        self.bias.fill_(0)
+        [plane.reset_parameters() for plane in self.hyperplanes]
+        [basis.reset_parameters_identity() for basis in self.basis]
+        self.mixing.reset_parameters()
         self.cached_result = None
         self.cached_num_edges = None
 
@@ -109,17 +122,20 @@ class HyperbolicGCNConv(torch_geometric.nn.conv.MessagePassing):
 
         edge_index, norm = self.cached_result
 
-        h = self.hyperplanes(x)
-        return self.propagate(edge_index, h=h, norm=norm)
+        xs = x.chunk(len(self.balls_in), -1)
+        dists = [plane(x) for x, plane in zip(xs, self.hyperplanes)]
+        dists = torch.cat(dists, dim=-1)
+        return self.propagate(edge_index, dists=dists, norm=norm)
 
-    def message(self, h_j=None, norm=None):
-        return norm.view(-1, 1) * h_j if norm is not None else h_j
+    def message(self, dists_j=None, norm=None):
+        return norm.view(-1, 1) * dists_j if norm is not None else dists_j
 
     def update(self, aggr_out):
-        aggr_out = aggr_out + self.bias
         activations = self.nonlinearity(aggr_out)
         activations = self.mixing(activations)
-        return self.basis(activations)
+        activations = activations.chunk(len(self.balls_out), -1)
+        points = [basis(a) for basis, a in zip(self.basis, activations)]
+        return torch.cat(points, dim=-1)
 
     def extra_repr(self) -> str:
         return "{} -> {}, aggr={aggr}".format(
