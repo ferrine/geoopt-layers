@@ -24,7 +24,6 @@ class HyperbolicGraphConv(torch_geometric.nn.conv.MessagePassing):
         num_basis=None,
         ball,
         ball_out=None,
-        local=False,
         nonlinearity=torch.nn.Identity(),
     ):
         if ball_out is None:
@@ -37,32 +36,6 @@ class HyperbolicGraphConv(torch_geometric.nn.conv.MessagePassing):
         self.ball_out = ball_out
         self.in_channels = in_channels
         self.out_channels = out_channels
-        self.local = local
-        if self.local:
-            self.__message_params__ = collections.OrderedDict(
-                {
-                    "x_i": inspect.Parameter(
-                        "x_i", inspect.Parameter.POSITIONAL_OR_KEYWORD
-                    ),
-                    "x_j": inspect.Parameter(
-                        "x_j", inspect.Parameter.POSITIONAL_OR_KEYWORD
-                    ),
-                    "edge_weight": inspect.Parameter(
-                        "edge_weight", inspect.Parameter.POSITIONAL_OR_KEYWORD
-                    ),
-                }
-            )  # ["x_i", "x_j"]
-        else:
-            self.__message_params__ = collections.OrderedDict(
-                {
-                    "h_j": inspect.Parameter(
-                        "h_j", inspect.Parameter.POSITIONAL_OR_KEYWORD
-                    ),
-                    "edge_weight": inspect.Parameter(
-                        "edge_weight", inspect.Parameter.POSITIONAL_OR_KEYWORD
-                    ),
-                }
-            )  # ["h_j"]
         self.hyperplanes_loop = Distance2PoincareHyperplanes(
             in_channels, num_basis, ball=ball, scaled=True, squared=False
         )
@@ -89,18 +62,12 @@ class HyperbolicGraphConv(torch_geometric.nn.conv.MessagePassing):
 
     def forward(self, x, edge_index, edge_weight=None, size=None):
         """"""
-        if self.local:
-            return self.propagate(edge_index, size=size, x=x, edge_weight=edge_weight)
-        else:
-            h = self.hyperplanes_neighbors(x)
-            return self.propagate(
-                edge_index, size=size, x=x, h=h, edge_weight=edge_weight
-            )
+        h = self.hyperplanes_neighbors(x)
+        return self.propagate(
+            edge_index, size=size, x=x, h=h, edge_weight=edge_weight
+        )
 
-    def message(self, x_i=None, x_j=None, h_j=None, edge_weight=None):
-        if self.local:
-            xr_j = self.ball_in.mobius_add(-x_i, x_j)
-            h_j = self.hyperplanes_neighbors(xr_j)
+    def message(self, h_j=None, edge_weight=None):
         return h_j if edge_weight is None else edge_weight.view(-1, 1) * h_j
 
     def update(self, aggr_out, x):

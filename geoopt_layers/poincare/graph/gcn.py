@@ -34,34 +34,6 @@ class HyperbolicGCNConv(torch_geometric.nn.conv.MessagePassing):
         self.improved = improved
         self.cached = cached
         self.normalize = normalize
-        self.local = local
-        if self.local:
-            # remove x_i
-            self.__msg_params__ = collections.OrderedDict(
-                {
-                    "x_i": inspect.Parameter(
-                        "x_i", inspect.Parameter.POSITIONAL_OR_KEYWORD
-                    ),
-                    "x_j": inspect.Parameter(
-                        "x_j", inspect.Parameter.POSITIONAL_OR_KEYWORD
-                    ),
-                    "norm": inspect.Parameter(
-                        "norm", inspect.Parameter.POSITIONAL_OR_KEYWORD
-                    ),
-                }
-            )
-        else:
-            # remove x_i
-            self.__msg_params__ = collections.OrderedDict(
-                {
-                    "h_j": inspect.Parameter(
-                        "h_j", inspect.Parameter.POSITIONAL_OR_KEYWORD
-                    ),
-                    "norm": inspect.Parameter(
-                        "norm", inspect.Parameter.POSITIONAL_OR_KEYWORD
-                    ),
-                }
-            )
         self.hyperplanes = Distance2PoincareHyperplanes(
             in_channels, num_basis, ball=ball, scaled=True, squared=False
         )
@@ -139,20 +111,15 @@ class HyperbolicGCNConv(torch_geometric.nn.conv.MessagePassing):
 
         edge_index, norm = self.cached_result
 
-        if self.local:
-            return self.propagate(edge_index, x=x, norm=norm)
-        else:
-            h = self.hyperplanes(x)
-            return self.propagate(edge_index, h=h, norm=norm)
+        h = self.hyperplanes(x)
+        return self.propagate(edge_index, h=h, norm=norm)
 
-    def message(self, x_i=None, x_j=None, h_j=None, norm=None):
-        if self.local:
-            xr_j = self.ball_in.mobius_add(-x_i, x_j)
-            h_j = self.hyperplanes(xr_j)
+    def message(self, h_j=None, norm=None):
         return norm.view(-1, 1) * h_j if norm is not None else h_j
 
     def update(self, aggr_out):
         aggr_out = aggr_out + self.bias
+        aggr_out = self.mixing(aggr_out)
         activations = self.nonlinearity(aggr_out)
         return self.basis(activations)
 
