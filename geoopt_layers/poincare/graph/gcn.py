@@ -146,8 +146,8 @@ class HyperbolicGCNConv(torch_geometric.nn.conv.MessagePassing):
         return torch.cat(points, dim=-1)
 
     def extra_repr(self) -> str:
-        return "{}x -> {}x, aggr={aggr}".format(
-            self.in_channels, self.out_channels, **self.__dict__
+        return "{}x{} -> {}x{}, aggr={aggr}".format(
+            self.in_channels, self.num_in_manifolds, self.out_channels, self.num_out_manifolds, **self.__dict__
         )
 
     @torch.no_grad()
