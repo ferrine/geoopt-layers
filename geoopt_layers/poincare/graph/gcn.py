@@ -19,11 +19,11 @@ class HyperbolicGCNConv(torch_geometric.nn.conv.MessagePassing):
         local=False,
         nonlinearity=torch.nn.Identity(),
     ):
-        if not isinstance(balls, list):
+        if not isinstance(balls, (list, tuple, torch.nn.ModuleList)):
             balls = [balls]
         if balls_out is None:
             balls_out = balls
-        if not isinstance(balls_out, list):
+        if not isinstance(balls_out, (list, tuple, torch.nn.ModuleList)):
             balls_out = [balls_out]
         super(HyperbolicGCNConv, self).__init__(aggr="add")
         if num_planes is None:
