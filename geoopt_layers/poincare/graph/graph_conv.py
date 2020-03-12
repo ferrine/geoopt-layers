@@ -69,6 +69,7 @@ class HyperbolicGraphConv(torch_geometric.nn.conv.MessagePassing):
         self.hyperplanes_neighbors = Distance2PoincareHyperplanes(
             in_channels, num_basis, ball=ball, scaled=True, squared=False
         )
+        self.mixing = torch.nn.Linear(num_basis, num_basis)
         self.basis = WeightedPoincareCentroids(
             out_channels, num_basis, ball=ball_out, lincomb=True
         )
@@ -77,13 +78,13 @@ class HyperbolicGraphConv(torch_geometric.nn.conv.MessagePassing):
 
     @torch.no_grad()
     def reset_parameters(self):
-        n = min(self.out_channels, self.num_basis)
-        k = self.out_channels
-        self.basis.log_centroids[:n] = torch.eye(
-            n,
-            k,
-            device=self.basis.log_centroids.device,
-            dtype=self.basis.log_centroids.dtype,
+        self.basis.reset_parameters_identity()
+        self.mixing.weight.set_(
+            torch.eye(
+                self.num_basis,
+                device=self.mixing.weight.device,
+                dtype=self.mixing.weight.dtype,
+            )
         )
 
     def forward(self, x, edge_index, edge_weight=None, size=None):
@@ -105,6 +106,7 @@ class HyperbolicGraphConv(torch_geometric.nn.conv.MessagePassing):
     def update(self, aggr_out, x):
         y = self.hyperplanes_loop(x)
         aggr_out = aggr_out + y
+        aggr_out = self.mixing(aggr_out)
         activations = self.nonlinearity(aggr_out)
         return self.basis(activations)
 
