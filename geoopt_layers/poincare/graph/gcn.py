@@ -27,7 +27,7 @@ class HyperbolicGCNConv(torch_geometric.nn.conv.MessagePassing):
             balls_out = [balls_out]
         super(HyperbolicGCNConv, self).__init__(aggr="add")
         if num_planes is None:
-            num_planes = in_channels
+            num_planes = out_channels
         if num_basis is None:
             num_basis = out_channels
         self.num_basis = num_basis
