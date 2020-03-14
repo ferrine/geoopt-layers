@@ -147,13 +147,19 @@ class HyperbolicGCNConv(torch_geometric.nn.conv.MessagePassing):
 
     def extra_repr(self) -> str:
         return "{}x{} -> {}x{}, aggr={aggr}".format(
-            self.in_channels, self.num_in_manifolds, self.out_channels, self.num_out_manifolds, **self.__dict__
+            self.in_channels,
+            self.num_in_manifolds,
+            self.out_channels,
+            self.num_out_manifolds,
+            **self.__dict__,
         )
 
     @torch.no_grad()
     def set_parameters_from_gcn_conv(self, gcn_conv: torch_geometric.nn.conv.GCNConv):
         self.reset_parameters()
-        self.hyperplanes[0].set_parameters_from_linear_operator(gcn_conv.weight.t(), gcn_conv.bias)
+        self.hyperplanes[0].set_parameters_from_linear_operator(
+            gcn_conv.weight.t(), gcn_conv.bias
+        )
 
     @classmethod
     def from_gcn_conv(
