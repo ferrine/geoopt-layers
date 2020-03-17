@@ -88,7 +88,7 @@ class Distance2PoincareHyperplanes(ManifoldModule):
         if self.scale is not None:
             self.scale.set_(-self.tangents.norm(dim=-1) / 2)
         self.tangents.proj_()
-        torch.nn.init.constant_(self.bias, 0.0)
+        torch.nn.init.constant_(self.log_dist0, -1)
 
     @torch.no_grad()
     def set_parameters_from_linear_operator(self, A, b=None):
