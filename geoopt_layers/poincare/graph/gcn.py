@@ -16,7 +16,7 @@ class HyperbolicGCNConv(torch_geometric.nn.conv.MessagePassing):
         num_planes=None,
         balls,
         balls_out=None,
-        local=False,
+        lincomb=True,
         nonlinearity=torch.nn.Identity(),
     ):
         if not isinstance(balls, (list, tuple, torch.nn.ModuleList)):
@@ -36,7 +36,6 @@ class HyperbolicGCNConv(torch_geometric.nn.conv.MessagePassing):
         self.balls_out = torch.nn.ModuleList(balls_out)
         self.in_channels = in_channels
         self.out_channels = out_channels
-        self.local = local
         self.improved = improved
         self.cached = cached
         self.normalize = normalize
@@ -51,7 +50,7 @@ class HyperbolicGCNConv(torch_geometric.nn.conv.MessagePassing):
         self.basis = torch.nn.ModuleList(
             [
                 WeightedPoincareCentroids(
-                    out_channels, num_basis, ball=ball_out, lincomb=True
+                    out_channels, num_basis, ball=ball_out, lincomb=lincomb
                 )
                 for ball_out in self.balls_out
             ]
