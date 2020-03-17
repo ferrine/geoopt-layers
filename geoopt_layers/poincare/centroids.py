@@ -76,6 +76,7 @@ class WeightedPoincareCentroids(ManifoldModule):
         *,
         ball,
         learn_origin=True,
+        unit_basis=False,
         lincomb=True,
     ):
         super().__init__()
@@ -87,7 +88,7 @@ class WeightedPoincareCentroids(ManifoldModule):
         self.manifold = ball
         self.lincomb = lincomb
         self.method = method
-        if lincomb:
+        if lincomb and unit_basis:
             # to avoid scaling ambiguity, normalize basis
             self.basis_manifold = geoopt.Sphere()
         else:
