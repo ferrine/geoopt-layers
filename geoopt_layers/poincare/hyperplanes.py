@@ -40,13 +40,16 @@ class Distance2PoincareHyperplanes(ManifoldModule):
             self.scale = torch.nn.Parameter(
                 torch.empty(num_planes), requires_grad=True,
             )
-        self.bias = torch.nn.Parameter(torch.empty(num_planes), requires_grad=True,)
+        self.log_dist0 = torch.nn.Parameter(torch.empty(num_planes), requires_grad=True,)
         self.reset_parameters()
 
     @property
+    def dist0(self):
+        return self.log_dist0.exp()
+
+    @property
     def points(self):
-        bias = self.bias
-        points = -bias.unsqueeze(-1) * self.tangents
+        points = -self.dist0.unsqueeze(-1) * self.tangents
         return self.ball.expmap0(points)
 
     def forward(self, input):

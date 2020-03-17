@@ -1,5 +1,6 @@
 from .. import Distance2PoincareHyperplanes, WeightedPoincareCentroids
 import torch_geometric.nn.conv
+import torch.distributions
 import torch.nn
 
 
