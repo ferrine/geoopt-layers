@@ -18,6 +18,7 @@ class HyperbolicGCNConv(torch_geometric.nn.conv.MessagePassing):
         balls_out=None,
         lincomb=True,
         nonlinearity=torch.nn.Identity(),
+        mixing_nonlinearity=torch.nn.Identity(),
     ):
         if not isinstance(balls, (list, tuple, torch.nn.ModuleList)):
             balls = [balls]
@@ -59,6 +60,7 @@ class HyperbolicGCNConv(torch_geometric.nn.conv.MessagePassing):
             num_planes * self.num_in_manifolds, num_basis * self.num_out_manifolds
         )
         self.nonlinearity = nonlinearity
+        self.mixing_nonlinearity = mixing_nonlinearity
         self.cached_result = None
         self.cached_num_edges = None
         self.reset_parameters()
@@ -140,6 +142,7 @@ class HyperbolicGCNConv(torch_geometric.nn.conv.MessagePassing):
     def update(self, aggr_out):
         activations = self.nonlinearity(aggr_out)
         activations = self.mixing(activations)
+        activations = self.mixing_nonlinearity(activations)
         activations = activations.chunk(self.num_out_manifolds, -1)
         points = [basis(a) for basis, a in zip(self.basis, activations)]
         return torch.cat(points, dim=-1)
