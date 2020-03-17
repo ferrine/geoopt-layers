@@ -86,7 +86,7 @@ class Distance2PoincareHyperplanes(ManifoldModule):
     def reset_parameters(self):
         torch.nn.init.xavier_normal_(self.tangents)
         if self.scale is not None:
-            self.scale.fill_(1.0)
+            self.scale.fill_(1e-2)
         self.tangents.proj_()
         torch.nn.init.constant_(self.log_dist0, -5)
 
