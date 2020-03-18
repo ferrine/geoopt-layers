@@ -40,7 +40,9 @@ class Distance2PoincareHyperplanes(ManifoldModule):
             self.scale = torch.nn.Parameter(
                 torch.empty(num_planes), requires_grad=True,
             )
-        self.log_dist0 = torch.nn.Parameter(torch.empty(num_planes), requires_grad=True,)
+        self.log_dist0 = torch.nn.Parameter(
+            torch.empty(num_planes), requires_grad=True,
+        )
         self.reset_parameters()
 
     @property
