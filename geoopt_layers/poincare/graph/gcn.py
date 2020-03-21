@@ -87,7 +87,7 @@ class HyperbolicGCNConv(torch_geometric.nn.conv.MessagePassing):
         [plane.reset_parameters() for plane in self.hyperplanes]
         [basis.reset_parameters_identity() for basis in self.basis]
         if self.mixing is not None:
-            self.mixing.reset_parameters()
+            self.mixing.weight.normal_(1, 1/self.mixing.weight.size(-1)**2)
         self.cached_result = None
         self.cached_num_edges = None
 
