@@ -554,25 +554,46 @@ def test_noise_layer(granularity, grad, ball):
     ball.assert_check_point_on_manifold(output)
 
 
-@pytest.mark.skip("not yet")
-def test_linear_layer_matches_euclidean():
-    ball = geoopt.Stereographic(k=0.0)
-    linear = torch.nn.Linear(10, 15)
-    hyp_linear = geoopt_layers.poincare.MobiusLinear.from_linear(linear, ball=ball)
-    input = torch.randn(3, 10)
-    output_euclidean = linear(input)
-    output_hyperbolic = hyp_linear(input)
-    #  with K=0 we should expect output matches
-    np.testing.assert_allclose(
-        output_euclidean.detach(), output_hyperbolic.detach(), atol=1e-6
-    )
-
-
 def test_linear_layer_expanded():
     ball = geoopt.Stereographic(k=0.0)
-    linear = torch.nn.Linear(10, 15)
     hyp_linear = geoopt_layers.poincare.MobiusLinear(10, 15, ball=ball, num_basis=20)
-    hyp_linear.set_parameters_from_linear_layer(linear)
     input = torch.randn(3, 10)
     output_hyperbolic = hyp_linear(input)
     ball.assert_check_point_on_manifold(output_hyperbolic)
+
+
+@pytest.mark.parametrize(
+    "bias", itertools.product([True, False]),
+)
+def test_gromov_2d(ball, bias):
+
+    point = ball.random(2, 5, 5, 2).permute(0, 3, 1, 2)
+    layer = geoopt_layers.poincare.GromovProductHyperbolic2d(2, 10, ball=ball,)
+    out = layer(point)
+    assert not torch.isnan(out).any()
+    assert out.shape == (2, 10, 5, 5)
+    out.sum().backward()
+
+
+def test_dist_gromov(ball):
+    point = ball.random(2, 5, 5, 2)
+    layer = geoopt_layers.poincare.GromovProductHyperbolic(2, 10, ball=ball,)
+    out = layer(point)
+    assert not torch.isnan(out).any()
+    assert out.shape == (2, 5, 5, 10)
+
+
+def test_gromov_1d_multi(ball):
+    point = ball.random(2, 3, 5, 5, 2).permute(0, 1, 2, 4, 3)
+    layer = geoopt_layers.poincare.GromovProductHyperbolic1d(2, 10, ball=ball,)
+    out = layer(point)
+    assert not torch.isnan(out).any()
+    assert out.shape == (2, 3, 5, 10, 5)
+
+
+def test_gromov_2d_multi(ball):
+    point = ball.random(2, 3, 5, 5, 2).permute(0, 1, 4, 2, 3)
+    layer = geoopt_layers.poincare.GromovProductHyperbolic2d(2, 10, ball=ball,)
+    out = layer(point)
+    assert not torch.isnan(out).any()
+    assert out.shape == (2, 3, 10, 5, 5)

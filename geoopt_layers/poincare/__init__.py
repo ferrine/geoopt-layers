@@ -29,6 +29,12 @@ from .hyperplanes import (
     Distance2PoincareHyperplanes2d,
     Distance2PoincareHyperplanes3d,
 )
+from .gromov_product import (
+    GromovProductHyperbolic,
+    GromovProductHyperbolic1d,
+    GromovProductHyperbolic2d,
+    GromovProductHyperbolic3d,
+)
 from .conv import MobiusConv2d
 from . import math
 from . import graph

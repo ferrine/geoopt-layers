@@ -163,7 +163,7 @@ def poincare_mean_einstein_scatter(
         weights = weights.unsqueeze(-1)
         nominator = nominator * weights
         denominator = denominator * weights
-    if weights.lt(0).any():
+    if weights is not None and weights.lt(0).any():
         src = torch.where(weights.lt(0), ball.antipode(src, dim=dim), src)
         weights = weights.abs()
     nominator = torch_scatter.scatter_add(nominator, index, dim, None, dim_size)

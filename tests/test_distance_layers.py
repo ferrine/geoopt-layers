@@ -5,6 +5,18 @@ import numpy as np
 import geoopt_layers.shape
 
 
+def test_gromov_product():
+    man = geoopt.Euclidean(1)
+    layer = geoopt_layers.GromovProduct(man)
+    x = man.random(10, 9)
+    y = man.random(10, 9)
+    reference = man.origin(10, 9)
+    inner = layer(reference, x, y)
+    assert inner.shape == (10,)
+    inner_reference = (x * y).sum(-1)
+    np.testing.assert_allclose(inner, inner_reference, atol=1e-5)
+
+
 def test_distance2centroids():
     man = geoopt.Sphere()
     layer = geoopt_layers.Distance2Centroids(man, 9, 256)

@@ -95,31 +95,3 @@ class MobiusLinear(ManifoldModule):
         distances = self.hyperplanes(input)
         activations = self.nonlinearity(distances)
         return self.basis(activations)
-
-    def set_parameters_from_linear_operator(self, A, b=None):
-        self.hyperplanes.set_parameters_from_linear_operator(A, b)
-        self.reset_parameters()
-
-    def set_parameters_from_linear_layer(self, linear):
-        self.set_parameters_from_linear_operator(linear.weight, linear.bias)
-
-    @classmethod
-    def from_linear(
-        cls,
-        linear: torch.nn.Linear,
-        nonlinearity=torch.nn.Identity(),
-        *,
-        ball,
-        ball_out=None,
-        num_basis=None,
-    ):
-        layer = cls(
-            linear.in_features,
-            linear.out_features,
-            nonlinearity=nonlinearity,
-            ball=ball,
-            ball_out=ball_out,
-            num_basis=num_basis,
-        )
-        layer.set_parameters_from_linear_layer(linear)
-        return layer

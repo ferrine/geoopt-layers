@@ -22,3 +22,10 @@ def pairwise_distances(x, y=None, dim=0, squared=False, *, manifold):
     else:
         output = manifold.dist(x, y)
     return output
+
+
+def gromov_product(at, x, y, *, manifold):
+    dist_ij = manifold.dist2(x, y)
+    dist_i = manifold.dist2(x, at)
+    dist_j = manifold.dist2(y, at)
+    return (dist_i + dist_j - dist_ij) / 2

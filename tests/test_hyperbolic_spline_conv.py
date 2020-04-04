@@ -8,7 +8,7 @@ from geoopt_layers.poincare.graph import HyperbolicSplineConv
 
 
 @pytest.mark.parametrize(
-    "bias,sizes,degree,kernel_size,root_weight,dim,local",
+    "bias,sizes,degree,kernel_size,root_weight,dim",
     itertools.product(
         [True, False],  # bias
         [(5, 5), (5, 7)],  # sizes
@@ -16,11 +16,10 @@ from geoopt_layers.poincare.graph import HyperbolicSplineConv
         [1, 2],  # kernel_size
         [True, False],  # root_weight
         [1, 2],  # dim
-        [True, False],  # local
     ),
 )
 def test_spline_conv_1(
-    bias, sizes, kernel_size, degree, root_weight, dim, local, ball_1, ball_2,
+    bias, sizes, kernel_size, degree, root_weight, dim, ball_1, ball_2,
 ):
     edge_index = torch.tensor([[0, 0, 0, 1, 2, 3, 0], [1, 2, 3, 0, 0, 0, 0]])
     x = ball_1.random(4, 5)
@@ -36,7 +35,6 @@ def test_spline_conv_1(
             degree=degree,
             root_weight=root_weight,
             dim=dim,
-            local=local,
         )(x, edge_index, pseudo=pseudo)
         assert out.shape == (4, sizes[-1])
         ball_2.assert_check_point_on_manifold(out)
@@ -83,7 +81,6 @@ def test_spline_conv(bias, sizes, kernel_size, degree, root_weight, dim):
         degree=degree,
         root_weight=root_weight,
         dim=dim,
-        local=False,
     )
 
     orig = SplineConv(

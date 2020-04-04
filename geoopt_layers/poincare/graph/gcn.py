@@ -1,4 +1,8 @@
-from .. import Distance2PoincareHyperplanes, WeightedPoincareCentroids
+from .. import (
+    Distance2PoincareHyperplanes,
+    WeightedPoincareCentroids,
+    GromovProductHyperbolic,
+)
 import torch_geometric.nn.conv
 import torch.distributions
 import torch.nn
@@ -18,10 +22,14 @@ class HyperbolicGCNConv(torch_geometric.nn.conv.MessagePassing):
         balls,
         balls_out=None,
         lincomb=True,
+        features="hyperplanes",
         nonlinearity=torch.nn.Identity(),
         mixing_nonlinearity=torch.nn.Identity(),
         mixing=True,
+        learn_reference=True,
     ):
+        if features not in {"hyperplanes", "gromov"}:
+            raise ValueError("Features fouls be one of {hyperplanes, gromov}")
         if not isinstance(balls, (list, tuple, torch.nn.ModuleList)):
             balls = [balls]
         if balls_out is None:
@@ -42,14 +50,28 @@ class HyperbolicGCNConv(torch_geometric.nn.conv.MessagePassing):
         self.improved = improved
         self.cached = cached
         self.normalize = normalize
-        self.hyperplanes = torch.nn.ModuleList(
-            [
-                Distance2PoincareHyperplanes(
-                    in_channels, num_planes, ball=ball, scaled=True, squared=False
-                )
-                for ball in self.balls_in
-            ]
-        )
+        if features == "hyperplanes":
+            self.features = torch.nn.ModuleList(
+                [
+                    Distance2PoincareHyperplanes(
+                        in_channels, num_planes, ball=ball, scaled=True, squared=False
+                    )
+                    for ball in self.balls_in
+                ]
+            )
+        else:
+            self.features = torch.nn.ModuleList(
+                [
+                    GromovProductHyperbolic(
+                        in_channels,
+                        num_planes,
+                        ball=ball,
+                        bias=True,
+                        learn_reference=learn_reference,
+                    )
+                    for ball in self.balls_in
+                ]
+            )
         self.basis = torch.nn.ModuleList(
             [
                 WeightedPoincareCentroids(
@@ -84,10 +106,10 @@ class HyperbolicGCNConv(torch_geometric.nn.conv.MessagePassing):
 
     @torch.no_grad()
     def reset_parameters(self):
-        [plane.reset_parameters() for plane in self.hyperplanes]
+        [fet.reset_parameters() for fet in self.features]
         [basis.reset_parameters_identity() for basis in self.basis]
         if self.mixing is not None:
-            self.mixing.weight.normal_(1, 1/self.mixing.weight.size(-1)**2)
+            self.mixing.weight.normal_(1, 1 / self.mixing.weight.size(-1) ** 2)
         self.cached_result = None
         self.cached_num_edges = None
 
@@ -142,7 +164,7 @@ class HyperbolicGCNConv(torch_geometric.nn.conv.MessagePassing):
         edge_index, norm = self.cached_result
 
         xs = x.chunk(self.num_in_manifolds, -1)
-        dists = [plane(x) for x, plane in zip(xs, self.hyperplanes)]
+        dists = [plane(x) for x, plane in zip(xs, self.features)]
         dists = torch.cat(dists, dim=-1)
         return self.propagate(edge_index, dists=dists, norm=norm)
 
@@ -168,34 +190,3 @@ class HyperbolicGCNConv(torch_geometric.nn.conv.MessagePassing):
             self.num_out_manifolds,
             **self.__dict__,
         )
-
-    @torch.no_grad()
-    def set_parameters_from_gcn_conv(self, gcn_conv: torch_geometric.nn.conv.GCNConv):
-        self.reset_parameters()
-        self.hyperplanes[0].set_parameters_from_linear_operator(
-            gcn_conv.weight.t(), gcn_conv.bias
-        )
-
-    @classmethod
-    def from_gcn_conv(
-        cls,
-        gcn_conv: torch_geometric.nn.conv.GCNConv,
-        nonlinearity=torch.nn.Identity(),
-        *,
-        ball,
-        ball_out=None,
-        num_basis=None,
-    ):
-        layer = cls(
-            gcn_conv.in_channels,
-            gcn_conv.out_channels,
-            num_basis=num_basis,
-            nonlinearity=nonlinearity,
-            balls=ball,
-            balls_out=ball_out,
-            improved=gcn_conv.improved,
-            normalize=gcn_conv.normalize,
-            cached=gcn_conv.cached,
-        )
-        layer.set_parameters_from_gcn_conv(gcn_conv)
-        return layer

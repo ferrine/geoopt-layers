@@ -1,10 +1,16 @@
 from typing import Tuple, Union
 import geoopt.utils
 from geoopt_layers.base import ManifoldModule
-from .functional import pairwise_distances
+from .functional import pairwise_distances, gromov_product
 import torch
 
-__all__ = ["Distance2Centroids", "PairwiseDistances", "KNN", "KNNIndex"]
+__all__ = [
+    "Distance2Centroids",
+    "PairwiseDistances",
+    "KNN",
+    "KNNIndex",
+    "GromovProduct",
+]
 
 
 class Distance2Centroids(ManifoldModule):
@@ -177,3 +183,12 @@ class KNN(KNNIndex):
         y, idx = torch.broadcast_tensors(y, idx)
         top_k_out = torch.gather(y, dim - 1, idx)
         return top_k_out
+
+
+class GromovProduct(ManifoldModule):
+    def __init__(self, manifold):
+        super().__init__()
+        self.manifold = manifold
+
+    def forward(self, at, x, y):
+        return gromov_product(at, x, y, manifold=self.manifold)
