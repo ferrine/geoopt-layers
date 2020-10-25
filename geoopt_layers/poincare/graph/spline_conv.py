@@ -2,15 +2,15 @@ import warnings
 import math
 import torch
 from torch.nn import Parameter
+import torch_geometric
 from .message_passing import HyperbolicMessagePassing
 from ...utils import repeat
 
-
 try:
-    from torch_spline_conv import SplineBasis, SplineWeighting
+    from torch_spline_conv import spline_basis, spline_weighting
 except ImportError:
-    SplineBasis = None
-    SplineWeighting = None
+    spline_basis = None
+    spline_weighting = None
 
 
 class HyperbolicSplineConv(HyperbolicMessagePassing):
@@ -83,14 +83,13 @@ class HyperbolicSplineConv(HyperbolicMessagePassing):
         )
         self.ball_in = ball
         self.ball_out = ball_out
-        if SplineBasis is None:
+        if spline_basis is None:
             raise ImportError("`HyperbolicSplineConv` requires `torch-spline-conv`.")
 
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.dim = dim
         self.degree = degree
-
         kernel_size = torch.tensor(repeat(kernel_size, dim), dtype=torch.long)
         self.register_buffer("kernel_size", kernel_size)
 
@@ -102,7 +101,6 @@ class HyperbolicSplineConv(HyperbolicMessagePassing):
         self.weight = Parameter(
             torch.empty(K, in_channels, out_channels), requires_grad=True
         )
-
         if root_weight:
             self.root = Parameter(
                 torch.empty(in_channels, out_channels), requires_grad=True
@@ -110,13 +108,12 @@ class HyperbolicSplineConv(HyperbolicMessagePassing):
         else:
             self.register_parameter("root", None)
 
-        bias_shape = out_channels if bias else None
         self.register_origin(
             "bias",
             self.ball_out,
-            origin_shape=bias_shape,
+            origin_shape=out_channels,
             parameter=True,
-            allow_none=True,
+            none=not bias,
         )
 
         self.reset_parameters()
@@ -133,10 +130,6 @@ class HyperbolicSplineConv(HyperbolicMessagePassing):
 
     def forward(self, x, edge_index, pseudo, edge_weight=None):
         """"""
-        try:
-            import torch_geometric
-        except ImportError:  # for debug mode only
-            torch_geometric = None
         x = x.unsqueeze(-1) if x.dim() == 1 else x
         pseudo = pseudo.unsqueeze(-1) if pseudo.dim() == 1 else pseudo
 
@@ -147,7 +140,7 @@ class HyperbolicSplineConv(HyperbolicMessagePassing):
                 "your data to the GPU."
             )
 
-        if torch_geometric is not None and torch_geometric.is_debug_enabled():
+        if torch_geometric.is_debug_enabled():
             if x.size(1) != self.in_channels:
                 raise RuntimeError(
                     "Expected {} node features, but found {}".format(
@@ -180,28 +173,30 @@ class HyperbolicSplineConv(HyperbolicMessagePassing):
                         " but found them in the interval [{}, {}]"
                     ).format(min_pseudo, max_pseudo)
                 )
-        x = self.ball_in.logmap0(x)
-        return self.propagate(edge_index, x=x, pseudo=pseudo, edge_weight=edge_weight)
+        log_x = self.ball_in.logmap0(x)
+        return self.propagate(
+            edge_index, x=x, log_x=log_x, pseudo=pseudo, edge_weight=edge_weight
+        )
 
-    def message(self, x_j, pseudo):
-        data = SplineBasis.apply(
+    def message(self, x_i=None, x_j=None, log_x_j=None, pseudo=None):
+        data = spline_basis(
             pseudo,
             self._buffers["kernel_size"],
             self._buffers["is_open_spline"],
             self.degree,
         )
-        z_j = SplineWeighting.apply(x_j, self.weight, *data)
-        return self.ball_out.expmap0(z_j)
+        log_z_j = spline_weighting(log_x_j, self.weight, *data)
+        return self.ball_out.expmap0(log_z_j)
 
-    def update(self, aggr_out, x):
+    def update(self, aggr_out, log_x, x):
         if self.root is not None:
-            z = self.ball_out.expmap0(torch.mm(x, self.root))
+            z = self.ball_out.expmap0(log_x @ self.root)
             aggr_out = self.ball_out.mobius_add(z, aggr_out)
         if self.bias is not None:
             aggr_out = self.ball_out.mobius_add(aggr_out, self.bias)
         return aggr_out
 
-    def __repr__(self):
-        return "{}({}, {}, dim={})".format(
-            self.__class__.__name__, self.in_channels, self.out_channels, self.dim
+    def extra_repr(self) -> str:
+        return "{} -> {}, dim={dim}, aggr={aggr}, aggr_method={aggr_method}".format(
+            self.in_channels, self.out_channels, **self.__dict__
         )

@@ -1,6 +1,5 @@
 import geoopt
 from geoopt_layers.base import ManifoldModule
-from .. import distance
 from .math import poincare_mean
 import torch
 
@@ -17,44 +16,31 @@ __all__ = [
 ]
 
 
-@torch.no_grad()
-def keep_zero(mod, input):
-    mod.centroids[0] = 0.0
-
-
-class Distance2PoincareCentroids(distance.Distance2Centroids):
+class Distance2PoincareCentroids(ManifoldModule):
     n = 0
 
     def __init__(
-        self,
-        centroid_shape: int,
-        num_centroids: int,
-        squared=False,
-        *,
-        ball,
-        std=1.0,
-        zero=False,
+        self, centroid_shape: int, num_centroids: int, squared=False, *, ball,
     ):
-        self.std = std
-        super().__init__(
-            ball,
-            centroid_shape=centroid_shape,
-            num_centroids=num_centroids,
-            squared=squared,
+        super().__init__()
+        if not isinstance(num_centroids, int) or num_centroids < 1:
+            raise TypeError("num_centroids should be int > 0")
+        self.centroid_shape = centroid_shape = geoopt.utils.size2shape(centroid_shape)
+        self.num_centroids = num_centroids
+        self.manifold = ball
+        self.log_centroids = torch.nn.Parameter(
+            torch.empty((num_centroids,) + centroid_shape), requires_grad=True
         )
-        self.zero = zero
-        if zero:
-            self.register_forward_pre_hook(keep_zero)
+        self.squared = squared
+        self.reset_parameters()
 
     @torch.no_grad()
     def reset_parameters(self):
-        self.centroids.set_(self.manifold.random(self.centroids.shape, std=self.std))
-        self.centroids[0] = 0.0
+        self.log_centroids.normal_(std=self.log_centroids.shape[-1] ** -0.5)
 
-    def extra_repr(self) -> str:
-        text = super().extra_repr()
-        text += ", zero={}".format(self.zero)
-        return text
+    @property
+    def centroids(self):
+        return self.manifold.expmap0(self.log_centroids)
 
     def forward(self, input):
         input = input.unsqueeze(-self.n - 1)
@@ -90,8 +76,7 @@ class WeightedPoincareCentroids(ManifoldModule):
         *,
         ball,
         learn_origin=True,
-        std=1.0,
-        zero=False,
+        unit_basis=False,
         lincomb=True,
     ):
         super().__init__()
@@ -99,44 +84,64 @@ class WeightedPoincareCentroids(ManifoldModule):
         if not isinstance(num_centroids, int) or num_centroids < 1:
             raise TypeError("num_centroids should be int > 0")
         self.centroid_shape = centroid_shape = geoopt.utils.size2shape(centroid_shape)
-        self.std = std
         self.num_centroids = num_centroids
         self.manifold = ball
         self.lincomb = lincomb
         self.method = method
-        self.centroids = geoopt.ManifoldParameter(
-            torch.empty((num_centroids,) + centroid_shape), manifold=ball
-        )
-        if method == "tangent":
-            origin_shape = centroid_shape
+        if lincomb and unit_basis:
+            # to avoid scaling ambiguity, normalize basis
+            self.basis_manifold = geoopt.Sphere()
         else:
-            origin_shape = None
-        self.register_origin(
-            "origin",
-            self.manifold,
-            origin_shape=origin_shape,
-            allow_none=True,
-            parameter=learn_origin,
+            # input is normalized, this will allow to have proper output support
+            self.basis_manifold = geoopt.Euclidean(ndim=1)
+        self.log_centroids = geoopt.ManifoldParameter(
+            torch.empty((num_centroids,) + centroid_shape), manifold=self.basis_manifold
         )
         self.learn_origin = learn_origin and method == "tangent"
-        self.zero = zero
-        if zero:
-            self.register_forward_pre_hook(keep_zero)
+        if self.learn_origin:
+            self.log_origin = torch.nn.Parameter(
+                torch.empty(centroid_shape), requires_grad=True
+            )
+        else:
+            self.register_parameter("log_origin", None)
         self.reset_parameters()
+
+    @property
+    def centroids(self):
+        return self.manifold.expmap0(self.log_centroids)
+
+    @property
+    def origin(self):
+        if self.log_origin is not None:
+            return self.manifold.expmap0(self.log_origin)
+        else:
+            return None
 
     @torch.no_grad()
     def reset_parameters(self):
-        self.centroids.set_(
-            self.manifold.random(
-                self.centroids.shape,
-                std=self.std,
-                dtype=self.centroids.dtype,
-                device=self.centroids.device,
-            )
+        self.log_centroids.normal_(std=self.log_centroids.shape[-1] ** -0.5)
+        self.log_centroids.proj_()
+        if self.log_origin is not None:
+            self.log_origin.zero_()
+
+    @torch.no_grad()
+    def reset_parameters_identity(self):
+        self.log_centroids.normal_()
+        self.log_centroids /= self.log_centroids.norm(dim=-1, keepdim=True)
+        if self.log_origin is not None:
+            self.log_origin.zero_()
+        n = min(self.num_centroids, self.centroid_shape[0])
+        k = self.centroid_shape[0]
+        self.log_centroids[:n] = torch.eye(
+            n, k, device=self.log_centroids.device, dtype=self.log_centroids.dtype,
         )
-        self.centroids[0] = 0.0
-        if self.origin is not None:
-            self.origin.zero_()
+        if self.num_centroids > k:
+            self.log_centroids[n : min(2 * n, self.num_centroids)] = -torch.eye(
+                min(n, self.num_centroids - n),
+                k,
+                device=self.log_centroids.device,
+                dtype=self.log_centroids.dtype,
+            )
 
     def forward(self, weights):
         if self.origin is not None:
@@ -146,7 +151,7 @@ class WeightedPoincareCentroids(ManifoldModule):
         return poincare_mean(
             self.centroids.view(self.centroids.shape + (1,) * self.n),
             weights=weights,
-            reducedim=-self.n - 2,
+            reducedim=[-self.n - 2],
             dim=-self.n - 1,
             ball=self.manifold,
             keepdim=False,
@@ -162,8 +167,7 @@ class WeightedPoincareCentroids(ManifoldModule):
             "num_centroids={num_centroids}, "
             "method={method}, "
             "learn_origin={learn_origin}, "
-            "lincomb={lincomb}, "
-            "zero={zero}".format(**self.__dict__, self=self)
+            "lincomb={lincomb}".format(**self.__dict__, self=self)
         )
 
 

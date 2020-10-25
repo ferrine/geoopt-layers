@@ -1,64 +1,117 @@
+from .. import (
+    Distance2PoincareHyperplanes,
+    WeightedPoincareCentroids,
+    GromovProductHyperbolic,
+)
+import torch_geometric.nn.conv
+import torch.distributions
 import torch.nn
-from .message_passing import HyperbolicMessagePassing
-from ..linear import MobiusLinear
 
 
-class HyperbolicGCNConv(HyperbolicMessagePassing):
+class HyperbolicGCNConv(torch_geometric.nn.conv.MessagePassing):
     def __init__(
         self,
         in_channels,
         out_channels,
+        *,
         improved=False,
         cached=False,
-        bias=True,
         normalize=True,
-        *,
-        ball,
-        ball_out=None,
-        learn_origin=False,
-        aggr_method="einstein",
+        num_basis=None,
+        num_planes=None,
+        balls,
+        balls_out=None,
+        lincomb=True,
+        features="hyperplanes",
+        nonlinearity=torch.nn.Identity(),
+        mixing_nonlinearity=torch.nn.Identity(),
+        mixing=True,
+        learn_reference=True,
     ):
-        if ball_out is None:
-            ball_out = ball
-        super(HyperbolicGCNConv, self).__init__(
-            aggr="mean", ball=ball_out, aggr_method=aggr_method
-        )
-        self.ball_in = ball
-        self.ball_out = ball_out
-
+        if features not in {"hyperplanes", "gromov"}:
+            raise ValueError("Features fouls be one of {hyperplanes, gromov}")
+        if not isinstance(balls, (list, tuple, torch.nn.ModuleList)):
+            balls = [balls]
+        if balls_out is None:
+            balls_out = balls
+        if not isinstance(balls_out, (list, tuple, torch.nn.ModuleList)):
+            balls_out = [balls_out]
+        super(HyperbolicGCNConv, self).__init__(aggr="add")
+        if num_planes is None:
+            num_planes = out_channels
+        if num_basis is None:
+            num_basis = out_channels
+        self.num_basis = num_basis
+        self.num_planes = num_planes
+        self.balls_in = torch.nn.ModuleList(balls)
+        self.balls_out = torch.nn.ModuleList(balls_out)
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.improved = improved
         self.cached = cached
         self.normalize = normalize
-
-        self.lin = MobiusLinear(
-            in_channels,
-            out_channels,
-            bias=False,
-            ball=self.ball_in,
-            ball_out=self.ball_out,
-            learn_origin=learn_origin,
+        if features == "hyperplanes":
+            self.features = torch.nn.ModuleList(
+                [
+                    Distance2PoincareHyperplanes(
+                        in_channels, num_planes, ball=ball, scaled=True, squared=False
+                    )
+                    for ball in self.balls_in
+                ]
+            )
+        else:
+            self.features = torch.nn.ModuleList(
+                [
+                    GromovProductHyperbolic(
+                        in_channels,
+                        num_planes,
+                        ball=ball,
+                        bias=True,
+                        learn_reference=learn_reference,
+                    )
+                    for ball in self.balls_in
+                ]
+            )
+        self.basis = torch.nn.ModuleList(
+            [
+                WeightedPoincareCentroids(
+                    out_channels, num_basis, ball=ball_out, lincomb=lincomb
+                )
+                for ball_out in self.balls_out
+            ]
         )
-        bias_shape = out_channels if bias else None
-        self.register_origin(
-            "bias",
-            self.ball_out,
-            origin_shape=bias_shape,
-            parameter=True,
-            allow_none=True,
-        )
+        if mixing:
+            self.mixing = torch.nn.Linear(
+                num_planes * self.num_in_manifolds, num_basis * self.num_out_manifolds
+            )
+        else:
+            self.mixing = None
+            assert num_planes == num_basis and (
+                self.num_out_manifolds == 1
+                or self.num_out_manifolds == self.num_in_manifolds
+            )
+        self.nonlinearity = nonlinearity
+        self.mixing_nonlinearity = mixing_nonlinearity
         self.cached_result = None
         self.cached_num_edges = None
         self.reset_parameters()
 
+    @property
+    def num_in_manifolds(self):
+        return len(self.balls_in)
+
+    @property
+    def num_out_manifolds(self):
+        return len(self.balls_out)
+
     @torch.no_grad()
     def reset_parameters(self):
-        self.lin.reset_parameters()
+        [fet.reset_parameters() for fet in self.features]
+        [basis.reset_parameters_identity() for basis in self.basis]
+        if self.mixing is not None:
+            self.mixing.weight.normal_(1, 1 / self.mixing.weight.size(-1) ** 2)
         self.cached_result = None
         self.cached_num_edges = None
-        if self.bias is not None:
-            self.bias.zero_()
 
     @staticmethod
     def norm(edge_index, num_nodes, edge_weight=None, improved=False, dtype=None):
@@ -84,8 +137,6 @@ class HyperbolicGCNConv(HyperbolicMessagePassing):
 
     def forward(self, x, edge_index, edge_weight=None):
         """"""
-        x = self.lin(x)
-
         if self.cached and self.cached_result is not None:
             if edge_index.size(1) != self.cached_num_edges:
                 raise RuntimeError(
@@ -111,15 +162,31 @@ class HyperbolicGCNConv(HyperbolicMessagePassing):
             self.cached_result = edge_index, norm
 
         edge_index, norm = self.cached_result
-        # slightly modified for re-weightning
-        return self.propagate(edge_index, x=x, edge_weight=norm)
+
+        xs = x.chunk(self.num_in_manifolds, -1)
+        dists = [plane(x) for x, plane in zip(xs, self.features)]
+        dists = torch.cat(dists, dim=-1)
+        return self.propagate(edge_index, dists=dists, norm=norm)
+
+    def message(self, dists_j=None, norm=None):
+        return norm.view(-1, 1) * dists_j if norm is not None else dists_j
 
     def update(self, aggr_out):
-        if self.bias is not None:
-            aggr_out = self.ball_out.mobius_add(aggr_out, self.bias)
-        return aggr_out
+        activations = self.nonlinearity(aggr_out)
+        if self.mixing is not None:
+            activations = self.mixing(activations)
+            activations = self.mixing_nonlinearity(activations)
+        elif self.num_out_manifolds == 1:
+            activations = sum(activations.chunk(self.num_in_manifolds, -1))
+        activations = activations.chunk(self.num_out_manifolds, -1)
+        points = [basis(a) for basis, a in zip(self.basis, activations)]
+        return torch.cat(points, dim=-1)
 
-    def __repr__(self):
-        return "{}({}, {})".format(
-            self.__class__.__name__, self.in_channels, self.out_channels
+    def extra_repr(self) -> str:
+        return "{}x{} -> {}x{}, aggr={aggr}".format(
+            self.in_channels,
+            self.num_in_manifolds,
+            self.out_channels,
+            self.num_out_manifolds,
+            **self.__dict__,
         )

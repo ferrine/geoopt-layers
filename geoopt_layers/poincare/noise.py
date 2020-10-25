@@ -73,7 +73,9 @@ class Noise(ManifoldModule):
             return input
 
     def extra_repr(self) -> str:
-        return "alpha={alpha}, beta={beta}, gamma={gamma}, grad={grad}, backwards={backwards}".format(**self.__dict__)
+        return "alpha={alpha}, beta={beta}, gamma={gamma}, grad={grad}, backwards={backwards}".format(
+            **self.__dict__
+        )
 
 
 class Discretization(ManifoldModule):
@@ -131,7 +133,7 @@ class Quantize(torch.autograd.Function):
 
     @staticmethod
     def backward(ctx, grad_output):
-        mask, = ctx.saved_tensors
+        (mask,) = ctx.saved_tensors
         if mask is None:
             return grad_output, None, None, None
         else:

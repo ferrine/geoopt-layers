@@ -1,3 +1,4 @@
+from .tangent_linear import MobiusTangentLinear
 from .linear import MobiusLinear
 from .pooling import (
     MobiusAdaptiveAvgPool2d,
@@ -27,6 +28,12 @@ from .hyperplanes import (
     Distance2PoincareHyperplanes1d,
     Distance2PoincareHyperplanes2d,
     Distance2PoincareHyperplanes3d,
+)
+from .gromov_product import (
+    GromovProductHyperbolic,
+    GromovProductHyperbolic1d,
+    GromovProductHyperbolic2d,
+    GromovProductHyperbolic3d,
 )
 from .conv import MobiusConv2d
 from . import math

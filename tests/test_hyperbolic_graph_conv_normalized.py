@@ -1,40 +1,31 @@
 import itertools
 import torch
 import pytest
-import geoopt
 from geoopt_layers.poincare.graph import HyperbolicGCNConv
 
 
 @pytest.mark.parametrize(
-    "aggr_method,bias,learn_origin,sizes,weighted,improved,cached",
+    "sizes,weighted,n_in,n_out,features",
     itertools.product(
-        ["einstein", "tangent"],
-        [True, False],
-        [True, False],
-        [(5, 5), (5, 7)],
-        [True, False],
-        [True, False],
-        [True, False],
+        [(5, 5), (5, 7)], [True, False], [1, 2], [1, 2], ["hyperplanes", "gromov"]
     ),
 )
-def test_graph_conv(aggr_method, bias, learn_origin, sizes, weighted, improved, cached):
-    ball = geoopt.PoincareBallExact()
-    ball_out = geoopt.PoincareBallExact(c=0.1)
+def test_graph_conv(sizes, weighted, ball_1, ball_2, n_in, n_out, features):
     edge_index = torch.tensor([[0, 0, 0, 1, 1, 1], [0, 1, 2, 0, 1, 2]])
     if weighted:
         edge_weight = torch.rand(edge_index.size(1))
     else:
         edge_weight = None
-    x = ball.random(3, 5)
-    out = HyperbolicGCNConv(
+    x = ball_1.random(n_in, 3, 5)
+    x = torch.cat(x.unbind(0), -1)
+    layer = HyperbolicGCNConv(
         *sizes,
-        aggr_method=aggr_method,
-        bias=bias,
-        learn_origin=learn_origin,
-        ball=ball,
-        ball_out=ball_out,
-        improved=improved,
-        cached=cached
-    )(x, edge_index, edge_weight=edge_weight)
-    assert out.shape == (3, sizes[-1])
-    ball_out.assert_check_point_on_manifold(out)
+        num_basis=sizes[1] * 2,
+        balls=[ball_1] * n_in,
+        balls_out=[ball_2] * n_out,
+        features=features,
+    )
+    out = layer(x, edge_index, edge_weight=edge_weight)
+    assert out.shape == (3, sizes[-1] * n_out)
+    for x in out.chunk(n_out, -1):
+        ball_2.assert_check_point_on_manifold(x)

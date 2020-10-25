@@ -1,12 +1,10 @@
 import torch
-import geoopt
 import numpy as np
-import geoopt_layers
 from geoopt_layers.poincare.graph.message_passing import HyperbolicMessagePassing
 
 
-def test_message_passing():
-    ball = geoopt.PoincareBallExact()
+@torch.no_grad()
+def test_message_passing(ball):
     edge_index = torch.tensor([[0, 0, 0, 1, 1, 1], [0, 1, 2, 0, 1, 2]])
 
     # x = torch.Tensor([[1], [2]])
@@ -15,7 +13,7 @@ def test_message_passing():
         edge_index, x=x, size=(2, 3)
     )
     assert out.shape == (3, 5)
-    mean = geoopt_layers.poincare.math.poincare_mean(x, ball=ball)
+    mean = ball.weighted_midpoint(x)
     np.testing.assert_allclose(out, mean.unsqueeze(0).expand_as(out), atol=1e-5)
 
     # x = torch.Tensor([[1], [2], [3]])

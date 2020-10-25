@@ -38,13 +38,20 @@ class MobiusBatchNorm(ManifoldModule):
             self.register_parameter("alpha", None)
         if bias:
             self.register_parameter(
-                "bias", geoopt.ManifoldParameter(torch.zeros(dimension), manifold=ball)
+                "log_bias", geoopt.ManifoldParameter(torch.zeros(dimension))
             )
         else:
-            self.register_parameter("bias", None)
+            self.register_parameter("log_bias", None)
         self.epsilon = epsilon
         self.beta1 = beta1
         self.beta2 = beta2
+
+    @property
+    def bias(self):
+        if self.log_bias is not None:
+            return self.ball.expmap0(self.log_bias)
+        else:
+            return None
 
     def forward(self, input):
         return mobius_batch_norm_nd(
